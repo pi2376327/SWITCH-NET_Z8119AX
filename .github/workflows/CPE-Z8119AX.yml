@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: CEP-Z8119AX
+name: cpe-z8119ax
 
 on:
   repository_dispatch:
