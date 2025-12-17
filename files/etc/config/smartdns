@@ -1,0 +1,32 @@
+config smartdns
+        option enabled '0'
+        option server_name 'smartdns'
+        option port '53'
+        option auto_set_dnsmasq '1'
+        option tcp_server '0'
+        option ipv6_server '0'
+        option bind_device '1'
+        option dualstack_ip_selection '0'
+        option serve_expired '0'
+        option cache_persist '1'
+        option resolve_local_hostnames '1'
+        option force_https_soa '1'
+        option rr_ttl_min '600'
+        option seconddns_tcp_server '0'
+        option speed_check_mode 'none'
+        option cache_size '10000'
+        option force_aaaa_soa '1'
+
+config server
+        option enabled '0'
+        option name 'DNS-Server'
+        option ip '8.8.8.8'
+        option port '53'
+        option type 'tcp'
+
+config server
+        option enabled '0'
+        option name 'DNS-Openvpn'
+        option ip '172.18.0.1'
+        option port '53'
+        option type 'udp'
