@@ -1,0 +1,124 @@
+#!/bin/sh
+
+#修改root密码
+passwd root << EOI
+switch-net.com
+switch-net.com
+EOI
+
+#修改默认主题为argon
+uci -q batch << EOI
+set luci.themes.Argon=/luci-static/argon
+set luci.main.mediaurlbase=/luci-static/argon
+commit luci
+EOI
+
+#修改名称,时区, 添加一个ntp服务地址,启用console登录密码
+uci -q batch << EOI
+set system.@system[0].hostname='SWITCH-NET'
+set system.@system[0].zonename='Asia/Shanghai'
+set system.@system[0].timezone='CST-8'
+set system.ntp.use_dhcp='0'
+set system.ntp.enabled='1'
+set system.ntp.server='ntp.aliyun.com'
+set system.@system[0].ttylogin='1'
+commit system
+EOI
+
+#修改lan IP和DNSMASQ配置
+uci -q batch << EOI
+set network.lan.ipaddr='192.168.150.1'
+commit network
+set dhcp.@dnsmasq[0].cachesize='10000'
+set dhcp.@dnsmasq[0].resolvfile='/etc/resolv.dnsmasq.conf'
+set dhcp.@dnsmasq[0].filter_aaaa='1'
+set dhcp.@dnsmasq[0].localservice='0'
+#set dhcp.@dnsmasq[0].interface='lan'
+#add_list dhcp.@dnsmasq[0].listen_address='192.168.150.1,127.0.0.1'
+commit dhcp
+EOI
+
+#更改wifi默认设置（ARM）
+uci -q batch <<EOI
+set wireless.radio0.legacy_rates='1'
+set wireless.radio0.country='US'
+set wireless.radio0.channel='11'
+set wireless.default_radio0.ssid='SWITCH-NET'
+set wireless.default_radio0.encryption='psk2'
+set wireless.default_radio0.key='switch-net.com'
+
+set wireless.radio1.country='US'
+set wireless.radio1.channel='149'
+set wireless.radio1.htmode='VHT40'
+set wireless.default_radio1.ssid='SWITCH-NET-5G'
+set wireless.default_radio1.encryption='psk2'
+set wireless.default_radio1.key='switch-net.com'
+commit wireless
+EOI
+
+sed -i '/option disabled/d' /etc/config/wireless
+sed -i '/set wireless.${name}.disabled/d' /lib/wifi/mac80211.sh
+
+#增加vpn0接口
+uci -q batch <<EOI
+set network.vpn0=interface
+set network.vpn0.ifname='tun0'
+set network.vpn0.proto='none'
+del network.wan6
+commit network
+EOI
+
+#更改ssh\web默认端口
+uci -q batch <<EOI
+set dropbear.@dropbear[0].Port='24680'
+delete dropbear.@dropbear[0].Interface
+commit dropbear
+set uhttpd.main.listen_http='0.0.0.0:24681'
+set uhttpd.main.listen_https='0.0.0.0:24682'
+commit uhttpd
+EOI
+
+#更改诊断页面默认显示的域名
+uci -q batch <<EOI
+set luci.diag.dns='119.29.29.29'
+set luci.diag.ping='119.29.29.29'
+set luci.diag.route='119.29.29.29'
+commit luci.diag
+EOI
+
+#更改统计端口位tun0
+uci -q batch <<EOI
+set luci_statistics.collectd_interface.Interfaces='tun0'
+commit luci_statistics
+EOI
+
+#给脚本文件添加权限
+chmod +x /etc/openvpn/openvpn-up.sh
+chmod +x /etc/openvpn/openvpn-down.sh
+chmod +x /root/script/update-chinaIPList.sh
+chmod +x /root/script/openvpn-watchdog.sh
+#touch ~/.vimrc
+ln -s /usr/share/vim/vimrc /usr/share/vim/defaults.vim  #修复vim bug
+rm -rf /etc/resolv.conf  #删除默认wan口dns地址
+echo 'nameserver 127.0.0.1' > /etc/resolv.conf #增加dns指向本机dnsmasq
+
+#修改版本名称
+#sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
+#echo "DISTRIB_REVISION='R25.01.04'" >> /etc/openwrt_release
+#sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
+#echo "DISTRIB_DESCRIPTION='switch-net.com'" >> /etc/openwrt_release
+sed -i "/OPENWRT_RELEASE*/d" /usr/lib/os-release
+echo 'OPENWRT_RELEASE="Powered by SWITCH-NET 202509"' >> /usr/lib/os-release
+
+#增加crontab任务
+echo '1 2 * * sun sh /root/script/update-chinaIPList.sh' >> /etc/crontabs/root
+echo '*/5 * * * * sh /root/script/openvpn-watchdog.sh' >> /etc/crontabs/root
+echo '0 5 * * sun reboot &' >> /etc/crontabs/root   #每周日凌晨5点重启
+echo '*/40 * * * * /etc/init.d/frpc start' >> /etc/crontabs/root ###每40分钟自动重启frp
+echo '*/40 * * * * /etc/init.d/rtty restart' >> /etc/crontabs/root
+
+#删除多余配置
+rm -rf /etc/config/openvpn_recipes #openvpn自带模版配置
+head -n 40 /etc/profile > tempfile && mv tempfile /etc/profile #删除自带多余banner
+
+exit 0
