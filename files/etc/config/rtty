@@ -1,0 +1,8 @@
+config rtty
+#   option  interface   'Default'
+    option  id          'Default'
+    option  description 'Z8119AX_SWITCH-NET'
+    option  host        '183.56.160.246'  
+    option  port        '5912'                              
+    option  token       'switch-net.com'    
+#   option  verbose     '1'
