@@ -21,3 +21,6 @@
 
 #openwrt #CONFIG_PACKAGE_luci-theme-argon=y
 git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+
+#更改ubi参数<0x2000000>
+sed -i "s/0x580000 0x20000000/0x580000 0x7280000/g" target/linux/mediatek/dts/mt7981b-zbtlink-zbt-z8119ax.dts
