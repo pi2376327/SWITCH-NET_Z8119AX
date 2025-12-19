@@ -64,5 +64,5 @@ else
         echo "$DATE: The $ips is a private ip address" >>/root/script/ovpn-script.log
 fi
 
+echo "----------------------------------------------------------------" >>/root/script/ovpn-script.log
 echo "$DATE: Openvpn-client startup" >>/root/script/ovpn-script.log
-echo "------------------------------END-------------------------------" >>/root/script/ovpn-script.log
