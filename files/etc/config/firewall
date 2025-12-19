@@ -2,35 +2,42 @@ config defaults
         option input 'ACCEPT'
         option output 'ACCEPT'
         option forward 'ACCEPT'
-        option drop_invalid '1'
-        option fullcone '2'
+        option drop_invalid '0'
+        option synflood_protect '0'
+        option tcp_syncookies '0'
+        option tcp_ecn '0'
 
 config zone
         option name 'lan'
+        option network 'lan'
         option input 'ACCEPT'
         option output 'ACCEPT'
         option forward 'ACCEPT'
-        option network 'lan'
+        option auto_helper '0'
 
 config zone
         option name 'wan'
+        option network 'wan'
+        option input 'ACCEPT'
         option output 'ACCEPT'
+        option forward 'ACCEPT'
         option masq '1'
         option mtu_fix '1'
-        option network 'wan wan6'
-        option input 'ACCEPT'
-        option forward 'ACCEPT'
+        option auto_helper '0'
 
 config include
         option path '/etc/firewall.user'
+        option type 'script'
+        option fw4_compatible '1'
 
 config zone
+        option name 'vpn'
+        option network 'vpn0'
         option input 'ACCEPT'
         option output 'ACCEPT'
-        option name 'vpn'
         option forward 'ACCEPT'
-        option network 'vpn0'
         option masq '1'
+        option auto_helper '0'
 
 config forwarding
         option dest 'wan'
