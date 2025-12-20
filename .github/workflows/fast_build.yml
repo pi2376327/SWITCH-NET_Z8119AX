@@ -1,0 +1,65 @@
+name: Fast DTS Verify Build
+
+on:
+  workflow_dispatch: # 手动触发编译
+
+env:
+  REPO_URL: https://github.com/openwrt/openwrt
+  REPO_BRANCH: openwrt-23.05
+  CONFIG_FILE: mini.config
+  DTS_PATH: target/linux/mediatek/dts/mt7981b-zbtlink-zbt-z8119ax.dts
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Prepare Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses5-dev gawk git gettext libssl-dev xsltproc rsync wget unzip python3
+        
+    - name: Clone OpenWrt
+      run: |
+        git clone --depth 1 -b $REPO_BRANCH $REPO_URL openwrt
+
+    - name: Cache Toolchain
+      uses: actions/cache@v3
+      with:
+        path: openwrt/staging_dir
+        key: ${{ runner.os }}-toolchain-${{ hashFiles('mini.config') }}
+
+    - name: Apply Custom DTS
+      run: |
+        # 将我们准备好的 DTS 覆盖到源码树中
+        cp -f mt7981b-zbtlink-zbt-z8119ax.dts openwrt/$DTS_PATH
+
+    - name: Update & Install Feeds
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Generate Config
+      run: |
+        cp -f mini.config openwrt/.config
+        cd openwrt
+        make defconfig
+
+    - name: Fast Compile Kernel & Image
+      run: |
+        cd openwrt
+        # -j$(nproc) 满载编译
+        # 只编译内核和生成最终镜像，跳过几千个 package 的编译
+        make target/linux/compile -j$(nproc)
+        make target/linux/install -j$(nproc) V=s
+        make checksum
+
+    - name: Upload Image
+      uses: actions/upload-artifact@v3
+      with:
+        name: Mini-Firmware
+        path: openwrt/bin/targets/mediatek/filogic/*.itb
