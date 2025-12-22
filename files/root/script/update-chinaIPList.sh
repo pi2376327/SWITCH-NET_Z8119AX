@@ -70,5 +70,13 @@ else
         echo "$DATE: Update ipset list from github completely" >> /root/script/update-ip.log
         echo "$DATE: The number of newest ipset list is: $ip_number"  >> /root/script/update-ip.log
         echo '---------------------------------------------------------------------------' >> /root/script/update-ip.log
+
+        echo '---------------------------------------------------------------------------'
+        echo "$DATE: Update ipset list from github completely"
+        echo "$DATE: The number of newest ipset list is: $ip_number"
+        echo '---------------------------------------------------------------------------'
+
+        #erase ovpn-scripe.log
+        echo " " > /root/script/ovpn-script.log
         exit 0
 fi
