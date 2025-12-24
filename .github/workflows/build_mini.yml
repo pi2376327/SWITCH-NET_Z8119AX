@@ -115,7 +115,7 @@ jobs:
     - name: 保存 sysupgrade 固件和校验文件
       uses: actions/upload-artifact@v4
       with:
-        name: openwrt-sysupgrade-firmware
+        name: openwrt-sysupgrade-firmware-z8119ax-$(date +"%Y.%m.%d-%H%M")
         path: |
           openwrt/bin/targets/mediatek/filogic/*sysupgrade.bin
           openwrt/bin/targets/mediatek/filogic/sha256sums.txt
