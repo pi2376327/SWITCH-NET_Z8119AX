@@ -113,7 +113,7 @@ jobs:
         sha256sum *sysupgrade.bin > sha256sums.txt
 
     - name: 保存 sysupgrade 固件和校验文件
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: openwrt-sysupgrade-firmware
         path: |
