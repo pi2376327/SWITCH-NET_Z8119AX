@@ -1,0 +1,121 @@
+name: Build Minimal OpenWrt 23.05
+
+on:
+  workflow_dispatch:   # 手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout workflow repo
+      uses: actions/checkout@v3
+
+    - name: 安装依赖
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git wget unzip \
+          libncurses5-dev libncursesw5-dev zlib1g-dev gawk flex gettext \
+          libssl-dev python3 python3-distutils file ccache
+
+    - name: 设置 ccache
+      run: |
+        echo 'export PATH="/usr/lib/ccache:$PATH"' >> $GITHUB_ENV
+
+    - name: 拉取你 fork 的 OpenWrt 23.05 源码
+      run: |
+        git clone https://github.com/pi2376327/openwrt-swq8119.git --branch v23.05 --depth 1 openwrt
+        cd openwrt
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: 恢复编译缓存
+      uses: actions/cache@v3
+      with:
+        path: |
+          openwrt/staging_dir
+          openwrt/build_dir
+          openwrt/tmp
+          openwrt/dl
+          ~/.ccache
+        key: ${{ runner.os }}-openwrt-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-openwrt-
+
+    - name: 覆盖最小化 .config
+      run: |
+        cat > openwrt/.config <<'EOF'
+        # 硬件平台参数
+        CONFIG_TARGET_mediatek=y
+        CONFIG_TARGET_mediatek_filogic=y
+        CONFIG_TARGET_mediatek_filogic_DEVICE_zbtlink_z8119ax=y
+
+        # 基础系统
+        CONFIG_PACKAGE_base-files=y
+        CONFIG_PACKAGE_busybox=y
+        CONFIG_PACKAGE_opkg=y
+        CONFIG_PACKAGE_uci=y
+        CONFIG_PACKAGE_netifd=y
+        CONFIG_PACKAGE_firewall4=y
+        CONFIG_PACKAGE_dnsmasq=y
+        CONFIG_PACKAGE_dropbear=y
+        CONFIG_PACKAGE_procd=y
+        CONFIG_PACKAGE_fstools=y
+        CONFIG_PACKAGE_block-mount=y
+
+        # 网络工具（最小化）
+        CONFIG_PACKAGE_iproute2=y
+        CONFIG_PACKAGE_iputils-ping=y
+        CONFIG_PACKAGE_iptables=y
+
+        # 去掉 LuCI 和 Web 界面
+        CONFIG_PACKAGE_luci=n
+        CONFIG_PACKAGE_luci-base=n
+        CONFIG_PACKAGE_luci-mod-admin-full=n
+
+        # 去掉无线相关（可按需保留）
+        CONFIG_PACKAGE_wpad-basic=n
+        CONFIG_PACKAGE_wpad-openssl=n
+        CONFIG_PACKAGE_hostapd=n
+        CONFIG_PACKAGE_iw=n
+        CONFIG_PACKAGE_wireless-tools=n
+
+        # 去掉额外工具
+        CONFIG_PACKAGE_ppp=n
+        CONFIG_PACKAGE_pppoe=n
+        CONFIG_PACKAGE_ppp-mod-pppoe=n
+        CONFIG_PACKAGE_usbutils=n
+        CONFIG_PACKAGE_pciutils=n
+
+        # 保留 libc
+        CONFIG_USE_MUSL=y
+        CONFIG_PACKAGE_libc=y
+
+        # 编译优化
+        CONFIG_DEVEL=y
+        CONFIG_TOOLCHAINOPTS=y
+        CONFIG_BUILD_PATENTED=n
+        CONFIG_STRIP_KERNEL_EXPORTS=y
+        CONFIG_USE_SSTRIP=y
+        EOF
+
+        cd openwrt
+        make defconfig
+
+    - name: 编译固件
+      run: |
+        cd openwrt
+        make -j$(nproc) V=s
+
+    - name: 生成 sha256 校验文件
+      run: |
+        cd openwrt/bin/targets/mediatek/filogic
+        sha256sum *sysupgrade.bin > sha256sums.txt
+
+    - name: 保存 sysupgrade 固件和校验文件
+      uses: actions/upload-artifact@v3
+      with:
+        name: openwrt-sysupgrade-firmware
+        path: |
+          openwrt/bin/targets/mediatek/filogic/*sysupgrade.bin
+          openwrt/bin/targets/mediatek/filogic/sha256sums.txt
