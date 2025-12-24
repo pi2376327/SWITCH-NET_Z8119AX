@@ -24,7 +24,7 @@ jobs:
 
     - name: 拉取你 fork 的 OpenWrt 23.05 源码
       run: |
-        git clone https://github.com/pi2376327/openwrt-swq8119.git --branch v23.05 --depth 1 openwrt
+        git clone https://github.com/pi2376327/openwrt-swq8119.git -b openwrt-23.05 openwrt
         cd openwrt
         ./scripts/feeds update -a
         ./scripts/feeds install -a
