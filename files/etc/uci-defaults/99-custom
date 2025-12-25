@@ -103,12 +103,16 @@ rm -rf /etc/resolv.conf  #删除默认wan口dns地址
 echo 'nameserver 127.0.0.1' > /etc/resolv.conf #增加dns指向本机dnsmasq
 
 #修改版本名称
-#sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
-#echo "DISTRIB_REVISION='R25.01.04'" >> /etc/openwrt_release
-#sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
-#echo "DISTRIB_DESCRIPTION='switch-net.com'" >> /etc/openwrt_release
-sed -i "/OPENWRT_RELEASE*/d" /usr/lib/os-release
-echo 'OPENWRT_RELEASE="Powered by SWITCH-NET 202509"' >> /usr/lib/os-release
+sed -i '/DISTRIB_ID/d' /etc/openwrt_release
+echo "DISTRIB_ID='SWITCH-NET_CPE'" >> /etc/openwrt_release
+sed -i '/DISTRIB_RELEASE/d' /etc/openwrt_release
+echo "DISTRIB_RELEASE='v2026'" >> /etc/openwrt_release
+sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
+echo "DISTRIB_REVISION='R2026'" >> /etc/openwrt_release
+sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
+echo "DISTRIB_DESCRIPTION='Powered by SWITCH-NET at 20260101'" >> /etc/openwrt_release
+#sed -i "/OPENWRT_RELEASE*/d" /usr/lib/os-release
+#echo 'OPENWRT_RELEASE="Powered by SWITCH-NET 20260101"' >> /usr/lib/os-release
 
 #增加crontab任务
 echo '1 2 * * sun sh /root/script/update-chinaIPList.sh' >> /etc/crontabs/root
