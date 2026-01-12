@@ -13,7 +13,7 @@ iptables -t nat -A PREROUTING -p tcp --dport 53 ! -i tun0 -j REDIRECT --to-ports
 
 #Redsocks Redirect
 iptables -t nat -N REDSOCKS
-ptables -t nat -C REDSOCKS -d 0.0.0.0/8 -j RETURN || \
+iptables -t nat -C REDSOCKS -d 0.0.0.0/8 -j RETURN || \
 iptables -t nat -A REDSOCKS -d 0.0.0.0/8 -j RETURN
 iptables -t nat -C REDSOCKS -d 10.0.0.0/8 -j RETURN || \
 iptables -t nat -A REDSOCKS -d 10.0.0.0/8 -j RETURN
