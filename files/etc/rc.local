@@ -5,7 +5,4 @@
 ipset create chnroute hash:net
 ipset restore -f /root/script/chnroute-ipset
 
-#start rtty-client
-/etc/init.d/rtty start
-
 exit 0
