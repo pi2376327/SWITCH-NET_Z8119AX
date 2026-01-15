@@ -97,6 +97,7 @@ chmod +x /etc/openvpn/openvpn-up.sh
 chmod +x /etc/openvpn/openvpn-down.sh
 chmod +x /root/script/update-chinaIPList.sh
 chmod +x /root/script/openvpn-watchdog.sh
+chmod +x /etc/init.d/redsocks2
 #touch ~/.vimrc
 ln -s /usr/share/vim/vimrc /usr/share/vim/defaults.vim  #修复vim bug
 rm -rf /etc/resolv.conf  #删除默认wan口dns地址
