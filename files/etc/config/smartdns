@@ -1,11 +1,11 @@
 config smartdns
-        option enabled '0'
+        option enabled '1'
         option server_name 'smartdns'
         option port '53'
         option auto_set_dnsmasq '1'
         option tcp_server '0'
         option ipv6_server '0'
-        option bind_device '1'
+        option bind_device '0'
         option dualstack_ip_selection '0'
         option serve_expired '0'
         option cache_persist '1'
@@ -16,13 +16,26 @@ config smartdns
         option speed_check_mode 'none'
         option cache_size '10000'
         option force_aaaa_soa '1'
+        option seconddns_port '6553'
+        option old_port '53'
+        option old_enabled '1'
+        option old_auto_set_dnsmasq '1'
 
 config server
-        option enabled '0'
-        option name 'DNS-Server'
-        option ip '8.8.8.8'
+        option enabled '1'
+        option name 'China'
+        option ip '119.29.29.29'
         option port '53'
-        option type 'tcp'
+        option type 'udp'
+        option server_group 'china'
+        option exclude_default_group '1'
+
+config server
+        option enabled '1'
+        option name 'OverSea'
+        option ip '8.8.8.8'
+        option type 'udp'
+        option port '53'
 
 config server
         option enabled '0'
