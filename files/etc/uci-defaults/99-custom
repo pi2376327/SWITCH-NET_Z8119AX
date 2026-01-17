@@ -112,9 +112,9 @@ echo "DISTRIB_RELEASE='v2026'" >> /etc/openwrt_release
 sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
 echo "DISTRIB_REVISION='R2026'" >> /etc/openwrt_release
 sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
-echo "DISTRIB_DESCRIPTION='Powered by SWITCH-NET at 20260101'" >> /etc/openwrt_release
+echo "DISTRIB_DESCRIPTION='Powered by SWITCH-NET at 20260118'" >> /etc/openwrt_release
 #sed -i "/OPENWRT_RELEASE*/d" /usr/lib/os-release
-#echo 'OPENWRT_RELEASE="Powered by SWITCH-NET 20260101"' >> /usr/lib/os-release
+#echo 'OPENWRT_RELEASE="Powered by SWITCH-NET 20260118"' >> /usr/lib/os-release
 
 #增加crontab任务
 echo '0 2 * * sun echo " " > /root/script/ovpn-script.log' >> /etc/crontabs/root 
