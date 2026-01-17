@@ -32,17 +32,17 @@ mkdir -p /tmp/china-ip/
 wget -P /tmp/china-ip/ https://raw.githubusercontent.com/metowolf/iplist/master/data/special/china.txt
 
 if [ ! -f /tmp/china-ip/china.txt ];then
-        echo $DATE: IPS file download failed, EXIT ! > /root/script/update-ip.log
+        echo $DATE: IPS file download failed, EXIT ! > /root/script/update.log
         exit 0
 else
-        echo $DATE: IPs file download successfully. > /root/script/update-ip.log
+        echo $DATE: IPs file download successfully. > /root/script/update.log
         #Delete empty row
         grep -vE '^#|^&}' /tmp/china-ip/china.txt  > /tmp/china-ip/ip.txt
 
         #Convert to ipse format and move to directory of openvpn
         sed -i 's/^/add chnroute /g' /tmp/china-ip/ip.txt
         mv -f /tmp/china-ip/ip.txt /root/script/chnroute-ipset
-        echo $DATE: Format conversion done >> /root/script/update-ip.log
+        echo $DATE: Format conversion done >> /root/script/update.log
 
         #Add private IPs to ipset list
         echo "add chnroute 10.0.0.0/8" >> /root/script/chnroute-ipset
@@ -52,24 +52,24 @@ else
         echo "add chnroute 119.29.29.29/32" >> /root/script/chnroute-ipset
         if ! is_private_ip "$ips"; then
                 echo "add chnroute $ips" >> /root/script/chnroute-ipset
-                echo "$DATE: Add $ips,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10 to the chnroute seccessfully" >> /root/script/update-ip.log
+                echo "$DATE: Add $ips,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10 to the chnroute seccessfully" >> /root/script/update.log
         else
-                echo "$DATE: The $ips is a private ip address" >> /root/script/update-ip.log
-                echo $DATE: Seccess to add  10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10 to the chnroute >> /root/script/update-ip.log
+                echo "$DATE: The $ips is a private ip address" >> /root/script/update.log
+                echo $DATE: Seccess to add  10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10 to the chnroute >> /root/script/update.log
         fi
 
         #Reload new ipset list
         ipset flush chnroute
         ipset restore -f /root/script/chnroute-ipset
-        echo $DATE: Loading ipset list successfully >> /root/script/update-ip.log
+        echo $DATE: Loading ipset list successfully >> /root/script/update.log
 
         #Delete tmp
         rm -rf /tmp/china-ip
         ip_number=$(cat /root/script/chnroute-ipset | wc -l)
-        echo '---------------------------------------------------------------------------' >> /root/script/update-ip.log
-        echo "$DATE: Update ipset list from github completely" >> /root/script/update-ip.log
-        echo "$DATE: The number of newest ipset list is: $ip_number"  >> /root/script/update-ip.log
-        echo '---------------------------------------------------------------------------' >> /root/script/update-ip.log
+        echo '---------------------------------------------------------------------------' >> /root/script/update.log
+        echo "$DATE: Update ipset list from github completely" >> /root/script/update.log
+        echo "$DATE: The number of newest ipset list is: $ip_number"  >> /root/script/update.log
+        echo '---------------------------------------------------------------------------' >> /root/script/update.log
 
         echo '---------------------------------------------------------------------------'
         echo "$DATE: Update ipset list from github completely"
