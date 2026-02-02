@@ -2,7 +2,7 @@ config rtty
 #   option  interface   'Default'
     option  id          'Default'
     option  description 'SWITCH_Z8119AX'
-    option  host        'rtty.switch-net.com'  
+    option  host        'rtty.switch-net.com'
     option  port        '5912'                              
     option  token       'switch-net.com'    
 #   option  verbose     '1'
