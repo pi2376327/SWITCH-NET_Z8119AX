@@ -8,8 +8,8 @@
 
 iptables -t nat -C PREROUTING -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53 || \
 iptables -t nat -A PREROUTING -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53
-iptables -t nat -C PREROUTING -p tcp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53 || \
-iptables -t nat -A PREROUTING -p tcp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53
+#iptables -t nat -C PREROUTING -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 1053 || \
+#iptables -t nat -A PREROUTING -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 1053
 
 #Redsocks Redirect
 iptables -t nat -N REDSOCKS
