@@ -29,6 +29,8 @@ iptables -t nat -C REDSOCKS -d 224.0.0.0/4 -j RETURN || \
 iptables -t nat -A REDSOCKS -d 224.0.0.0/4 -j RETURN
 iptables -t nat -C REDSOCKS -d 240.0.0.0/4 -j RETURN || \
 iptables -t nat -A REDSOCKS -d 240.0.0.0/4 -j RETURN
+iptables -t nat -C REDSOCKS -m set --match-set chn dst -j RETURN || \
+iptables -t nat -A REDSOCKS -m set --match-set chn dst -j RETURN
 iptables -t nat -C REDSOCKS -s 192.168.150.0/24 -p tcp -j REDIRECT --to-ports 30000 || \
 iptables -t nat -A REDSOCKS -s 192.168.150.0/24 -p tcp -j REDIRECT --to-ports 30000
 iptables -t nat -C REDSOCKS -s 192.168.151.0/24 -p tcp -j REDIRECT --to-ports 30001 || \
@@ -37,3 +39,5 @@ iptables -t nat -C REDSOCKS -s 192.168.152.0/24 -p tcp -j REDIRECT --to-ports 30
 iptables -t nat -A REDSOCKS -s 192.168.152.0/24 -p tcp -j REDIRECT --to-ports 30002
 #iptables -t nat -C PREROUTING -p tcp -j REDSOCKS || \
 #iptables -t nat -I PREROUTING -p tcp -j REDSOCKS
+#iptables -t filter -C FORWARD -p udp -m udp ! --dport 53 -m set ! --match-set chnroute dst -j DROP || \
+#iptables -t filter -I FORWARD -p udp -m udp ! --dport 53 -m set ! --match-set chnroute dst -j DROP
