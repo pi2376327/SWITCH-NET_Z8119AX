@@ -6,5 +6,5 @@ iptables -t mangle -D OUTPUT -m set ! --match-set chnroute dst -j MARK --set-mar
 ip route del default table 100
 ip rule del from all fwmark 1 table 100
 
-echo "----------------------------------------------------------------" >>/root/script/ovpn-script.log
 echo "$DATE: Openvpn-client disconnected" >>/root/script/ovpn-script.log
+echo "----------------------------------------------------------------" >>/root/script/ovpn-script.log
