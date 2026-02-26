@@ -7,7 +7,7 @@ src=$(ip addr show tun0 | grep 'inet ' | sed 's/^.*inet //g' | sed 's/\/16.*$//g
 gw=$(ip addr show tun0 | grep 'inet ' | cut -d' ' -f6 | cut -d'.' -f1-2).0.1
 ip route add default via $gw dev tun0 src $src table 100 
 ip rule add from all fwmark 1 table 100
-#ip route add 8.8.8.8 via $gw dev tun0 src $src
+ip route add 8.8.8.8 via $gw dev tun0 src $src
 
 #check and add rules of mangle     
 iptables -t mangle -C PREROUTING -m set ! --match-set chnroute dst -j MARK --set-mark 1
