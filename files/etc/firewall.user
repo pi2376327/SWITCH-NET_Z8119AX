@@ -29,8 +29,8 @@ iptables -t nat -C REDSOCKS -d 224.0.0.0/4 -j RETURN || \
 iptables -t nat -A REDSOCKS -d 224.0.0.0/4 -j RETURN
 iptables -t nat -C REDSOCKS -d 240.0.0.0/4 -j RETURN || \
 iptables -t nat -A REDSOCKS -d 240.0.0.0/4 -j RETURN
-iptables -t nat -C REDSOCKS -m set --match-set chn dst -j RETURN || \
-iptables -t nat -A REDSOCKS -m set --match-set chn dst -j RETURN
+iptables -t nat -C REDSOCKS -m set --match-set chnroute dst -j RETURN || \
+iptables -t nat -A REDSOCKS -m set --match-set chnroute dst -j RETURN
 iptables -t nat -C REDSOCKS -s 192.168.150.0/24 -p tcp -j REDIRECT --to-ports 30000 || \
 iptables -t nat -A REDSOCKS -s 192.168.150.0/24 -p tcp -j REDIRECT --to-ports 30000
 iptables -t nat -C REDSOCKS -s 192.168.151.0/24 -p tcp -j REDIRECT --to-ports 30001 || \
