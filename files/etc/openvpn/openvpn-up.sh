@@ -5,9 +5,16 @@ DATE=`date +%Y-%m-%d-%H:%M:%S`
 #add route-policy
 src=$(ip addr show tun0 | grep 'inet ' | sed 's/^.*inet //g' | sed 's/\/16.*$//g')
 gw=$(ip addr show tun0 | grep 'inet ' | cut -d' ' -f6 | cut -d'.' -f1-2).0.1
-ip route add default via $gw dev tun0 src $src table 100 
-ip rule add from all fwmark 1 table 100
+ip route add default via $gw dev tun0 src $src table 100
 ip route add 8.8.8.8 via $gw dev tun0 src $src
+
+ipset list | grep 192.168 & ipset list | grep 172.16 & ipset list | grep 10.0.0.0
+if [ $? = 0 ]; then
+        ip rule add from all fwmark 1 table 100
+        echo "$DATE: private ipset list exist,add ip rule for fwmark successfully" >>/root/script/ovpn-script.log
+else
+        echo "$DATE: private ipset list not exist,fail to add ip rule for fwmark" >>/root/script/ovpn-script.log
+fi
 
 #check and add rules of mangle     
 iptables -t mangle -C PREROUTING -m set ! --match-set chnroute dst -j MARK --set-mark 1
