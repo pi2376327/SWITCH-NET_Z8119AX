@@ -123,7 +123,7 @@ echo '2 2 * * sun sh /root/script/update-domainlist.sh' >> /etc/crontabs/root
 echo '*/5 * * * * sh /root/script/openvpn-watchdog.sh' >> /etc/crontabs/root
 echo '0 5 * * sun reboot &' >> /etc/crontabs/root   #每周日凌晨5点重启
 echo '*/40 * * * * /etc/init.d/frpc start' >> /etc/crontabs/root ###每40分钟自动重启frp
-echo '*/40 * * * * /etc/init.d/rtty restart' >> /etc/crontabs/root
+echo '*/40 * * * * /etc/init.d/rtty start' >> /etc/crontabs/root
 
 #删除多余配置
 rm -rf /etc/config/openvpn_recipes #openvpn自带模版配置
