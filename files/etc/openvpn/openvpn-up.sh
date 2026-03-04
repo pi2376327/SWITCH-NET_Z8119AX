@@ -14,6 +14,7 @@ if [ $? = 0 ]; then
         echo "$DATE: private ipset list exist,add ip rule for fwmark successfully" >>/root/script/ovpn-script.log
 else
         echo "$DATE: private ipset list not exist,fail to add ip rule for fwmark" >>/root/script/ovpn-script.log
+        exit 1
 fi
 
 #check and add rules of mangle     
