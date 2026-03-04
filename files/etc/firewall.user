@@ -43,11 +43,11 @@ iptables -t nat -A PREROUTING -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports
 #iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3053
 #iptables -t nat -C OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000 || \
 #iptables -t nat -A OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000
-iptables -t nat -C PREROUTING -s 192.168.151.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3153 || \
-iptables -t nat -A PREROUTING -s 192.168.151.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3153
-iptables -t nat -C OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001 || \
-iptables -t nat -A OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001
-iptables -t nat -C PREROUTING -s 192.168.152.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3253 || \
-iptables -t nat -A PREROUTING -s 192.168.152.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3253
-iptables -t nat -C OUTPUT -d 1.1.1.1 -p tcp --dport 53 -j REDIRECT --to-ports 30002 || \
-iptables -t nat -A OUTPUT -d 1.1.1.1 -p tcp --dport 53 -j REDIRECT --to-ports 30002
+#iptables -t nat -C PREROUTING -s 192.168.151.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3153 || \
+#iptables -t nat -A PREROUTING -s 192.168.151.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3153
+#iptables -t nat -C OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001 || \
+#iptables -t nat -A OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001
+#iptables -t nat -C PREROUTING -s 192.168.152.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3253 || \
+#iptables -t nat -A PREROUTING -s 192.168.152.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 3253
+#iptables -t nat -C OUTPUT -d 1.1.1.1 -p tcp --dport 53 -j REDIRECT --to-ports 30002 || \
+#iptables -t nat -A OUTPUT -d 1.1.1.1 -p tcp --dport 53 -j REDIRECT --to-ports 30002
