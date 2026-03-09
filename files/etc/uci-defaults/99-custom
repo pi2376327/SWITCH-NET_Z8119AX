@@ -25,7 +25,7 @@ set system.@system[0].ttylogin='1'
 commit system
 EOI
 
-#修改lan IP和DNSMASQ配置
+#修改lan IP和DNSMASQ配置，添加其他wifi-dhcp
 uci -q batch << EOI
 set network.lan.ipaddr='192.168.150.1'
 commit network
@@ -33,6 +33,30 @@ set dhcp.@dnsmasq[0].cachesize='10000'
 set dhcp.@dnsmasq[0].resolvfile='/etc/resolv.dnsmasq.conf'
 set dhcp.@dnsmasq[0].filter_aaaa='1'
 set dhcp.@dnsmasq[0].localservice='0'
+set dhcp.wifi1=dhcp
+set dhcp.wifi1.interface='wifi1'
+set dhcp.wifi1.start='100'
+set dhcp.wifi1.limit='150'
+set dhcp.wifi1.leasetime='12h'
+set dhcp.wifi1.dhcp_option='6,192.168.151.1'
+set dhcp.wifi2=dhcp
+set dhcp.wifi2.interface='wifi2'
+set dhcp.wifi2.start='100'
+set dhcp.wifi2.limit='150'
+set dhcp.wifi2.leasetime='12h'
+set dhcp.wifi2.dhcp_option='6,192.168.152.1'
+set dhcp.wifi3=dhcp
+set dhcp.wifi3.interface='wifi3'
+set dhcp.wifi3.start='100'
+set dhcp.wifi3.limit='150'
+set dhcp.wifi3.leasetime='12h'
+set dhcp.wifi3.dhcp_option='6,192.168.153.1'
+set dhcp.wifi4=dhcp
+set dhcp.wifi4.interface='wifi4'
+set dhcp.wifi4.start='100'
+set dhcp.wifi4.limit='150'
+set dhcp.wifi4.leasetime='12h'
+set dhcp.wifi4.dhcp_option='6,192.168.154.1'
 #set dhcp.@dnsmasq[0].interface='lan'
 #add_list dhcp.@dnsmasq[0].listen_address='192.168.150.1,127.0.0.1'
 commit dhcp
