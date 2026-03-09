@@ -33,8 +33,8 @@ iptables -t nat -A REDSOCKS -s 192.168.153.0/24 -p tcp -j REDIRECT --to-ports 30
 iptables -t nat -C REDSOCKS -s 192.168.154.0/24 -p tcp -j REDIRECT --to-ports 30004 || \
 iptables -t nat -A REDSOCKS -s 192.168.154.0/24 -p tcp -j REDIRECT --to-ports 30004
 
-iptables -t nat -C PREROUTING -p tcp -m set ! --match-set chnroute dst -j REDSOCKS || \
-iptables -t nat -I PREROUTING -p tcp -m set ! --match-set chnroute dst -j REDSOCKS
+iptables -t nat -C PREROUTING ! -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j REDSOCKS || \
+iptables -t nat -I PREROUTING ! -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j REDSOCKS
 #iptables -t filter -C FORWARD -p udp -m udp ! --dport 53 -m set ! --match-set chnroute dst -j DROP || \
 #iptables -t filter -I FORWARD -p udp -m udp ! --dport 53 -m set ! --match-set chnroute dst -j DROP
 
