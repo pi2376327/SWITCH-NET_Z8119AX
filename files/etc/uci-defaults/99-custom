@@ -111,7 +111,7 @@ EOI
 sed -i '/option disabled/d' /etc/config/wireless
 sed -i '/set wireless.${name}.disabled/d' /lib/wifi/mac80211.sh
 
-#增加vpn0和wifi接口
+#增加vpn0和wifi接口（加入firewall-lan区域）
 uci -q batch <<EOI
 set network.vpn0=interface
 set network.vpn0.ifname='tun0'
@@ -137,7 +137,12 @@ set network.wifi4.device='phy0-ap4'
 set network.wifi4.proto='static'
 set network.wifi4.ipaddr='192.168.154.1'
 set network.wifi4.netmask='255.255.255.0'
+add_list firewall.@zone[0].network='wifi1'
+add_list firewall.@zone[0].network='wifi2'
+add_list firewall.@zone[0].network='wifi3'
+add_list firewall.@zone[0].network='wifi4'
 commit network
+commit firewall
 EOI
 
 #更改ssh\web默认端口
