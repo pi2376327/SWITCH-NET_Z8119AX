@@ -59,12 +59,32 @@ EOI
 sed -i '/option disabled/d' /etc/config/wireless
 sed -i '/set wireless.${name}.disabled/d' /lib/wifi/mac80211.sh
 
-#增加vpn0接口
+#增加vpn0和wifi接口
 uci -q batch <<EOI
 set network.vpn0=interface
 set network.vpn0.ifname='tun0'
 set network.vpn0.proto='none'
 del network.wan6
+set network.wifi1=interface
+set network.wifi1.device='phy0-ap1'
+set network.wifi1.proto='static'
+set network.wifi1.ipaddr='192.168.151.1'
+set network.wifi1.netmask='255.255.255.0'
+set network.wifi2=interface
+set network.wifi2.device='phy0-ap2'
+set network.wifi2.proto='static'
+set network.wifi2.ipaddr='192.168.152.1'
+set network.wifi2.netmask='255.255.255.0'
+set network.wifi3=interface
+set network.wifi3.device='phy0-ap3'
+set network.wifi3.proto='static'
+set network.wifi3.ipaddr='192.168.153.1'
+set network.wifi3.netmask='255.255.255.0'
+set network.wifi4=interface
+set network.wifi4.device='phy0-ap4'
+set network.wifi4.proto='static'
+set network.wifi4.ipaddr='192.168.154.1'
+set network.wifi4.netmask='255.255.255.0'
 commit network
 EOI
 
