@@ -34,7 +34,7 @@ config server
         option enabled '1'
         option name 'OverSea'
         option ip '8.8.8.8'
-        option type 'udp'
+        option type 'tcp'
         option port '53'
 
 config server
