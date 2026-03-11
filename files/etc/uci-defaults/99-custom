@@ -23,7 +23,7 @@ set system.ntp.enabled='1'
 set system.ntp.server='ntp.aliyun.com'
 set system.@system[0].ttylogin='1'
 set system.@system[0].log_size='1024'
-set system.@system[0].log_file='/tmp/system.log'
+set system.@system[0].log_file='/tmp/log/system.log'
 commit system
 EOI
 
