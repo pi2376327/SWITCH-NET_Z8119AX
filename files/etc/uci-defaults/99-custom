@@ -111,7 +111,7 @@ set wireless.radio1.htmode='VHT40'
 set wireless.radio1.disabled='1'
 set wireless.default_radio1.ssid='SWITCH-NET-5G'
 set wireless.default_radio1.encryption='psk2'
-set wireless.default_radio1.key='switch-net.com'
+set wireless.default_radio1.key='switchnet.com'
 set wireless.default_radio1.disabled='1'
 commit wireless
 EOI
