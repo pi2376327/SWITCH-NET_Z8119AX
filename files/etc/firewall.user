@@ -43,8 +43,8 @@ iptables -t nat -A REDSOCKS -s 192.168.154.0/24 -p tcp -j REDIRECT --to-ports 30
 #iptables for dns
 iptables -t nat -C PREROUTING -s 192.168.150.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53 || \
 iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53
-iptables -t nat -C OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000 || \
-iptables -t nat -A OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000
+#iptables -t nat -C OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000 || \
+#iptables -t nat -A OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000
 iptables -t nat -C PREROUTING -s 192.168.151.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 30153 || \
 iptables -t nat -A PREROUTING -s 192.168.151.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 30153
 iptables -t nat -C OUTPUT -d 9.9.9.9 -p tcp --dport 53 -j REDIRECT --to-ports 30001 || \
