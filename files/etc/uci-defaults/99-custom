@@ -188,7 +188,8 @@ chmod +x /etc/init.d/redsocks2
 #touch ~/.vimrc
 ln -s /usr/share/vim/vimrc /usr/share/vim/defaults.vim  #修复vim bug
 rm -rf /etc/resolv.conf  #删除默认wan口dns地址
-echo 'nameserver 127.0.0.1' > /etc/resolv.conf #增加dns指向本机dnsmasq
+echo 'nameserver 127.0.0.1' > /etc/resolv.conf #增加dns指向本机dns
+echo 'nameserver 119.29.29.29' >> /etc/resolv.conf
 
 #修改版本名称
 sed -i '/DISTRIB_ID/d' /etc/openwrt_release
