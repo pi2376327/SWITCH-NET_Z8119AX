@@ -33,6 +33,7 @@ wget -P /tmp/china-ip/ https://raw.githubusercontent.com/metowolf/iplist/master/
 
 if [ ! -f /tmp/china-ip/china.txt ];then
         echo $DATE: IPS file download failed, EXIT ! > /root/script/update.log
+        echo $DATE: IPS file download failed, EXIT !
         exit 0
 else
         echo $DATE: IPs file download successfully. > /root/script/update.log
