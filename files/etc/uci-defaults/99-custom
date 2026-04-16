@@ -79,7 +79,7 @@ set wireless.wifi1.mode='ap'
 set wireless.wifi1.ssid='wifi1-America'
 set wireless.wifi1.encryption='psk2'
 set wireless.wifi1.key='switchnet.com'
-set wireless.wifi1.disabled='1'
+
 set wireless.wifi2=wifi-iface
 set wireless.wifi2.device='radio0'
 set wireless.wifi2.network='wifi2'
@@ -87,7 +87,7 @@ set wireless.wifi2.mode='ap'
 set wireless.wifi2.ssid='wifi2-America'
 set wireless.wifi2.encryption='psk2'
 set wireless.wifi2.key='switchnet.com'
-set wireless.wifi2.disabled='1'
+
 set wireless.wifi3=wifi-iface
 set wireless.wifi3.device='radio0'
 set wireless.wifi3.network='wifi3'
@@ -95,7 +95,7 @@ set wireless.wifi3.mode='ap'
 set wireless.wifi3.ssid='wifi3-Gemany'
 set wireless.wifi3.encryption='psk2'
 set wireless.wifi3.key='switchnet.com'
-set wireless.wifi3.disabled='1'
+
 set wireless.wifi4=wifi-iface
 set wireless.wifi4.device='radio0'
 set wireless.wifi4.network='wifi4'
@@ -103,16 +103,14 @@ set wireless.wifi4.mode='ap'
 set wireless.wifi4.ssid='wifi4-British'
 set wireless.wifi4.encryption='psk2'
 set wireless.wifi4.key='switchnet.com'
-set wireless.wifi4.disabled='1'
 
 set wireless.radio1.country='US'
 set wireless.radio1.channel='149'
 set wireless.radio1.htmode='VHT40'
-set wireless.radio1.disabled='1'
+
 set wireless.default_radio1.ssid='SWITCH-NET-5G'
 set wireless.default_radio1.encryption='psk2'
 set wireless.default_radio1.key='switchnet.com'
-set wireless.default_radio1.disabled='1'
 commit wireless
 EOI
 wifi reload
@@ -215,5 +213,14 @@ echo '0 5 * * sun reboot &' >> /etc/crontabs/root   #每周日凌晨5点重启
 #删除多余配置
 rm -rf /etc/config/openvpn_recipes #openvpn自带模版配置
 head -n 40 /etc/profile > tempfile && mv tempfile /etc/profile #删除自带多余banner
+
+uci set wireless.wifi1.disabled='1'
+uci set wireless.wifi2.disabled='1'
+uci set wireless.wifi3.disabled='1'
+uci set wireless.wifi4.disabled='1'
+uci set wireless.radio1.disabled='1'
+uci set wireless.default_radio1.disabled='1'
+uci commit wireless
+wifi reload
 
 exit 0
