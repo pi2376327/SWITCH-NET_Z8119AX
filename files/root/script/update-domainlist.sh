@@ -5,9 +5,9 @@ DATE=`date +%Y-%m-%d-%H:%M:%S`
 if [ ! -d /tmp/smartdns/ ];then
         mkdir -p /tmp/smartdns
 fi
-
+echo '-----------------------------------------------------------------------------------------' >> /root/script/update.log
 #Download the file of China-Domain-List
-wget -O /tmp/smartdns/china.conf https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf 
+wget -P /tmp/smartdns/ https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf 
 
 if [ ! -f /tmp/smartdns/china.conf ];then
     echo $DATE: Domain file download failed, EXIT !   >> /root/script/update.log
@@ -26,11 +26,10 @@ else
     domain_number=$(cat /etc/smartdns/address.conf | wc -l)
     echo "$DATE: Update domain list from github/felixonmars completely"
     echo "$DATE: The number of newest domain list is: $domain_number"
-    echo '-----------------------------------------------------------------------------------------' >> /root/script/update.log
     echo "$DATE: Update domain list from github/felixonmars completely" >> /root/script/update.log
     echo "$DATE: The number of newest domain list is: $domain_number"  >> /root/script/update.log
-    echo '-----------------------------------------------------------------------------------------' >> /root/script/update.log
     /etc/init.d/smartdns restart
 
     exit 0
 fi
+echo '-----------------------------------------------------------------------------------------' >> /root/script/update.log
