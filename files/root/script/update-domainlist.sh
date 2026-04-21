@@ -9,14 +9,14 @@ echo '--------------------------------------------------------------------------
 #Download the file of China-Domain-List
 wget -P /tmp/smartdns/ https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf 
 
-if [ ! -f /tmp/smartdns/china.conf ];then
+if [ ! -f /tmp/smartdns/accelerated-domains.china.conf ];then
     echo $DATE: Domain file download failed, EXIT !   >> /root/script/update.log
     exit 0
 else
     echo $DATE: Domian file download successful.  >> /root/script/update.log  
  
     #Format conversion
-    sed -e 's/server=/nameserver /g' -e 's/114.114.114.114/china/g' /tmp/smartdns/china.conf > /tmp/smartdns/address.conf
+    sed -e 's/server=/nameserver /g' -e 's/114.114.114.114/china/g' /tmp/smartdns/accelerated-domains.china.conf > /tmp/smartdns/address.conf
     #cp -a /tmp/smartdns/address.conf /root/script/cndomainlist.conf
     mv -f /tmp/smartdns/address.conf /etc/smartdns/address.conf
     echo $DATE: The conversion of the file to a smartDNS .conf format has been completed.
