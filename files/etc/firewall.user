@@ -41,6 +41,8 @@ iptables -t nat -A REDSOCKS -s 192.168.154.0/24 -p tcp -j REDIRECT --to-ports 30
 #iptables -t filter -I FORWARD -p udp -m udp ! --dport 53 -m set ! --match-set chnroute dst -j DROP
 
 #iptables for dns
+iptables -t nat -C PREROUTING -p udp --dport 53 -i eth0 -j REDIRECT --to-ports 53 || \
+iptables -t nat -A PREROUTING -p udp --dport 53 -i eth0 -j REDIRECT --to-ports 53
 iptables -t nat -C PREROUTING -s 192.168.150.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53 || \
 iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p udp --dport 53 ! -i tun0 -j REDIRECT --to-ports 53
 #iptables -t nat -C OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000 || \
