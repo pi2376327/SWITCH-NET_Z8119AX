@@ -73,7 +73,7 @@ set wireless.default_radio0.ssid='SWITCH-NET'
 set wireless.default_radio0.encryption='psk2'
 set wireless.default_radio0.key='switchnet.com'
 set wireless.wifi1=wifi-iface
-set wireless.wifi1.device='radio0'
+set wireless.wifi1.device='radio1'
 set wireless.wifi1.network='wifi1'
 set wireless.wifi1.mode='ap'
 set wireless.wifi1.ssid='wifi1-America'
@@ -81,7 +81,7 @@ set wireless.wifi1.encryption='psk2'
 set wireless.wifi1.key='switchnet.com'
 
 set wireless.wifi2=wifi-iface
-set wireless.wifi2.device='radio0'
+set wireless.wifi2.device='radio1'
 set wireless.wifi2.network='wifi2'
 set wireless.wifi2.mode='ap'
 set wireless.wifi2.ssid='wifi2-America'
@@ -89,7 +89,7 @@ set wireless.wifi2.encryption='psk2'
 set wireless.wifi2.key='switchnet.com'
 
 set wireless.wifi3=wifi-iface
-set wireless.wifi3.device='radio0'
+set wireless.wifi3.device='radio1'
 set wireless.wifi3.network='wifi3'
 set wireless.wifi3.mode='ap'
 set wireless.wifi3.ssid='wifi3-Gemany'
@@ -97,7 +97,7 @@ set wireless.wifi3.encryption='psk2'
 set wireless.wifi3.key='switchnet.com'
 
 set wireless.wifi4=wifi-iface
-set wireless.wifi4.device='radio0'
+set wireless.wifi4.device='radio1'
 set wireless.wifi4.network='wifi4'
 set wireless.wifi4.mode='ap'
 set wireless.wifi4.ssid='wifi4-British'
@@ -125,22 +125,22 @@ set network.vpn0.ifname='tun0'
 set network.vpn0.proto='none'
 del network.wan6
 set network.wifi1=interface
-set network.wifi1.device='phy0-ap1'
+set network.wifi1.device='phy1-ap1'
 set network.wifi1.proto='static'
 set network.wifi1.ipaddr='192.168.151.1'
 set network.wifi1.netmask='255.255.255.0'
 set network.wifi2=interface
-set network.wifi2.device='phy0-ap2'
+set network.wifi2.device='phy1-ap2'
 set network.wifi2.proto='static'
 set network.wifi2.ipaddr='192.168.152.1'
 set network.wifi2.netmask='255.255.255.0'
 set network.wifi3=interface
-set network.wifi3.device='phy0-ap3'
+set network.wifi3.device='phy1-ap3'
 set network.wifi3.proto='static'
 set network.wifi3.ipaddr='192.168.153.1'
 set network.wifi3.netmask='255.255.255.0'
 set network.wifi4=interface
-set network.wifi4.device='phy0-ap4'
+set network.wifi4.device='phy1-ap4'
 set network.wifi4.proto='static'
 set network.wifi4.ipaddr='192.168.154.1'
 set network.wifi4.netmask='255.255.255.0'
@@ -218,8 +218,8 @@ uci set wireless.wifi1.disabled='1'
 uci set wireless.wifi2.disabled='1'
 uci set wireless.wifi3.disabled='1'
 uci set wireless.wifi4.disabled='1'
-uci set wireless.radio1.disabled='1'
-uci set wireless.default_radio1.disabled='1'
+uci set wireless.radio0.disabled='1'
+uci set wireless.default_radio0.disabled='1'
 uci commit wireless
 wifi reload
 
