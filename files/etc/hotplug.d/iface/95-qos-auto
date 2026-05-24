@@ -2,7 +2,7 @@
 
 # Target lock file used to prevent redundant execution
 LOCK_FILE="/var/run/qos_hotplug.lock"
-DELAY_SECONDS="5"
+DELAY_SECONDS="3"
 
 if echo "$DEVICE" | grep -q "tun"; then
     case "$ACTION" in
