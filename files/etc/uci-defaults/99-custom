@@ -226,4 +226,6 @@ uci set wireless.default_radio0.disabled='1'
 uci commit wireless
 wifi reload
 
+/etc/init.d/qos enable #qos限速自启动
+
 exit 0
