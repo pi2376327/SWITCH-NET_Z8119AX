@@ -13,6 +13,14 @@ iptables -t nat -C PREROUTING -s 192.168.150.0/24 -p udp --dport 53 -j REDIRECT 
 iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p udp --dport 53 -j REDIRECT --to-ports 53
 #iptables -t nat -C OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000 || \
 #iptables -t nat -A OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000
+#iptables -t nat -C PREROUTING -s 192.168.151.0/24 -p udp --dport 53 -j REDIRECT --to-ports 8844 || \
+#iptables -t nat -A PREROUTING -s 192.168.151.0/24 -p udp --dport 53 -j REDIRECT --to-ports 8844
+#iptables -t nat -C OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001 || \
+#iptables -t nat -A OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001
+#iptables -t nat -C PREROUTING -s 192.168.152.0/24 -p udp --dport 53 -j REDIRECT --to-ports 9999 || \
+#iptables -t nat -A PREROUTING -s 192.168.152.0/24 -p udp --dport 53 -j REDIRECT --to-ports 9999
+#iptables -t nat -C OUTPUT -d 9.9.9.9 -p tcp --dport 53 -j REDIRECT --to-ports 30001 || \
+#iptables -t nat -A OUTPUT -d 9.9.9.9 -p tcp --dport 53 -j REDIRECT --to-ports 30001
 
 #iptables for FORWARD with tcp and udp
 #iptables -t mangle -I PREROUTING -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2
