@@ -25,18 +25,18 @@ if [ $? = 0 ]; then
         if [ $? = 0 ]; then
                 echo "$DATE: The OUTPUT of mangle rules already exist" >>/root/script/ovpn-script.log
         else
-                iptables -t mangle -I OUTPUT -m set ! --match-set chnroute dst -j MARK --set-mark 1
+                iptables -t mangle -A OUTPUT -m set ! --match-set chnroute dst -j MARK --set-mark 1
                 echo "$DATE: Add OUTPUT of mangle rules" >>/root/script/ovpn-script.log
         fi
 else
-        iptables -t mangle -I PREROUTING -m set ! --match-set chnroute dst -j MARK --set-mark 1
+        iptables -t mangle -A PREROUTING -m set ! --match-set chnroute dst -j MARK --set-mark 1
         echo "$DATE: Add PREROUTING of mangle rules" >>/root/script/ovpn-script.log
 
         iptables -t mangle -C OUTPUT -m set ! --match-set chnroute dst -j MARK --set-mark 1
         if [ $? = 0 ]; then
                 echo "$DATE: The OUTPUT rules of mangle already exist" >>/root/script/ovpn-script.log
         else
-                iptables -t mangle -I OUTPUT -m set ! --match-set chnroute dst -j MARK --set-mark 1
+                iptables -t mangle -A OUTPUT -m set ! --match-set chnroute dst -j MARK --set-mark 1
                 echo "$DATE: Add OUTPUT of mangle rules" >>/root/script/ovpn-script.log
         fi
 fi
