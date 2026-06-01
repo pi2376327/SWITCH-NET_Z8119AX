@@ -14,5 +14,5 @@ iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p udp --dport 53 -j REDIRECT 
 #iptables -t nat -C OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000 || \
 #iptables -t nat -A OUTPUT -d 8.8.8.8 -p tcp --dport 53 -j REDIRECT --to-ports 30000
 
-iptables -t mangle -I PREROUTING -s 192.168.150.0/24 -p udp ! --dport 53 -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2
-iptables -t mangle -I PREROUTING -s 192.168.150.0/24 -p tcp ! --dport 53 -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2
+iptables -t mangle -I PREROUTING -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2
+iptables -t mangle -I PREROUTING -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2
