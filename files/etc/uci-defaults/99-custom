@@ -179,6 +179,8 @@ EOI
 #给脚本文件添加权限
 chmod +x /etc/openvpn/openvpn-up.sh
 chmod +x /etc/openvpn/openvpn-down.sh
+chmod +x /etc/openvpn/openvpn1-up.sh
+chmod +x /etc/openvpn/openvpn1-down.sh
 chmod +x /root/script/update-iplist.sh
 chmod +x /root/script/update-domainlist.sh
 chmod +x /root/script/openvpn-watchdog.sh
