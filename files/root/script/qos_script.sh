@@ -27,7 +27,8 @@ start() {
     tc class add dev ifb1 parent 1: classid 1:10 htb rate ${DL_LIMIT}mbit ceil ${DL_LIMIT}mbit
     tc qdisc add dev ifb0 root handle 1: htb default 10
     tc class add dev ifb0 parent 1: classid 1:10 htb rate ${UL_LIMIT}mbit ceil ${UL_LIMIT}mbit
-    log_msg "Shared pool created: DL=${DL_LIMIT}Mbit/s, UL=${UL_LIMIT}Mbit/s"
+    log_msg "Shared pool created: DownLoad=${DL_LIMIT}Mbit/s, UpLoad=${UL_LIMIT}Mbit/s"
+    echo "Shared pool created: DownLoad=${DL_LIMIT}Mbit/s, UpLoad=${UL_LIMIT}Mbit/s"
 
     # Scan and bind all active tun interfaces to the shared pool
     TUN_DEVS=$(ip link show | grep -oE 'tun[0-9]+')
@@ -42,6 +43,7 @@ start() {
         tc qdisc add dev $dev handle ffff: ingress
         tc filter add dev $dev parent ffff: protocol ip prio 1 u32 match u32 0 0 action mirred egress redirect dev ifb1
         log_msg "Successfully attached interface to shared pool: $dev"
+        echo "Successfully attached interface to shared pool: $dev"
     done
 }
 
