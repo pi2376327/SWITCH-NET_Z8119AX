@@ -8,4 +8,8 @@ ipset restore -f /root/script/chnroute-ipset
 #start rtty-client
 /etc/init.d/rtty start
 
+#ip rule for REDIRECT all oversea traffic
+#ip route add local 0.0.0.0/0 dev lo table 300
+#ip rule add fwmark 2 table 300 
+
 exit 0
