@@ -1,8 +1,9 @@
 #!/bin/sh
 # ====================================================================
 # SDWAN CPE 流量监控系统 一键全自动纯净/覆盖部署脚本
-# 适用环境：OpenWrt 21.02 / 22.03 / 23.05 +
-# 升级特性：使用管道重构底层采集架构，彻底根除 Heredoc 嵌套语法冲突 Bug
+# 适用环境：OpenWrt 21.02 / 22.03 / 23.05 + (完美兼容 ARM / x86 架构)
+# 升级特性：引入 CPU 架构精准判定技术，x86 绑定 eth0，ARM 绑定 eth1，前后端对齐
+# 修复日志：重构前端静态页写入逻辑，规避 Shell 文本流转义引发的语法错误
 # ====================================================================
 
 set -e
@@ -41,13 +42,31 @@ mkdir -p /usr/bin
 mkdir -p /www/cgi-bin
 mkdir -p /www/speed
 
+# ================= 架构检测核心变量定义 =================
+ARCH_TYPE=$(uname -m)
+GLOBAL_WAN="eth0"
+
+case "$ARCH_TYPE" in
+    x86_64|i386|i686)
+        GLOBAL_WAN="eth0"
+        ;;
+    aarch64*|arm*|mips*)
+        GLOBAL_WAN="eth1"
+        ;;
+    *)
+        GLOBAL_WAN="eth0"
+        ;;
+esac
+echo "系统底层架构为: $ARCH_TYPE，已选定专用 WAN 接口: $GLOBAL_WAN"
+# =======================================================
+
 echo "========= [3/6] 正在生成后台定时流量统计采集器 (traffic_collector.sh) ========="
-# 核心修正：这里只管生成纯净的采集脚本，内部绝无嵌套 EOF
+# 使用强转义以确保 $ 符号全部原封不动传入脚本，在外部通过 sed 注入 GLOBAL_WAN
 cat << 'OUTER_EOF' > /usr/bin/traffic_collector.sh
 #!/bin/sh
 DB_DIR="/usr/share/traffic_rrd"
 mkdir -p "$DB_DIR"
-INTERFACES="eth1 br-lan"
+INTERFACES="TARGET_WAN br-lan"
 
 init_rrd() {
     local iface=$1
@@ -64,29 +83,39 @@ init_rrd() {
 
 get_bytes() {
     local iface=$1
-    awk -v ifn="$iface" '$1 ~ ifn {sub(/:/, "", $1); print $2, $10}' /proc/net/dev
+    awk -v ifn="$iface" '$1 ~ "^"ifn":" {print $2, $10}' /proc/net/dev
 }
 
 for i in $INTERFACES TUN_TOTAL; do init_rrd "$i"; done
-for tun in $(awk -F: 'NR>2 {print $1}' /proc/net/dev | tr -d ' ' | grep '^tun'); do init_rrd "$tun"; done
 
-# 用管道（Pipeline）安全代替历史遗留的嵌套 Heredoc
+for tun in $(awk -F: 'NR>2 {print $1}' /proc/net/dev | tr -d ' ' | grep '^tun'); do 
+    init_rrd "$tun"; 
+done
+
 for iface in $INTERFACES; do
     stats=$(get_bytes "$iface")
     if [ -n "$stats" ]; then
         rx=$(echo "$stats" | awk '{print $1}')
         tx=$(echo "$stats" | awk '{print $2}')
+        [ -z "$rx" ] && rx=0
+        [ -z "$tx" ] && tx=0
         rrdtool update "$DB_DIR/$iface.rrd" N:"$rx":"$tx"
     fi
 done
 
-total_rx=0; total_tx=0
+total_rx=0
+total_tx=0
+
 for tun in $(awk -F: 'NR>2 {print $1}' /proc/net/dev | tr -d ' ' | grep '^tun'); do
     stats=$(get_bytes "$tun")
     if [ -n "$stats" ]; then
         rx=$(echo "$stats" | awk '{print $1}')
         tx=$(echo "$stats" | awk '{print $2}')
-        rrdtool update "$DB_DIR/$tun.rrd" N:"$rx":"$tx"
+        rx=${rx:-0}
+        tx=${tx:-0}
+        echo "$rx" | grep -q '^[0-9]\+$' || rx=0
+        echo "$tx" | grep -q '^[0-9]\+$' || tx=0
+        rrdtool update "$DB_DIR/$tun.rrd" N:"$rx":"$tx" 2>/dev/null || true
         total_rx=$((total_rx + rx))
         total_tx=$((total_tx + tx))
     fi
@@ -97,6 +126,8 @@ if [ $total_rx -gt 0 ] || [ $total_tx -gt 0 ]; then
 fi
 OUTER_EOF
 
+# 精准替换采集器中的 WAN 接口标识
+sed -i "s/TARGET_WAN/$GLOBAL_WAN/g" /usr/bin/traffic_collector.sh
 chmod +x /usr/bin/traffic_collector.sh
 
 echo "========= [4/6] 正在生成后端数据路由 CGI 接口服务 ========="
@@ -148,6 +179,7 @@ chmod +x /www/cgi-bin/get_history_speed
 chmod +x /www/cgi-bin/get_net_speed
 
 echo "========= [5/6] 正在生成前端高阶主页面 (index.html) ========="
+# 关键修复点：使用 'OUTER_EOF' 纯净文本模式，防止一切网页 JS 语法在部署阶段被 Shell 误解析
 cat << 'OUTER_EOF' > /www/speed/index.html
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -157,51 +189,22 @@ cat << 'OUTER_EOF' > /www/speed/index.html
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         :root {
-            --bg-main: #0b111e; 
-            --bg-card: #121b2e; 
-            --border-color: #1e2d4a;
-            --text-main: #f1f5f9; 
-            --text-muted: #64748b; 
-            --theme-blue: #38bdf8;
-            --theme-green: #00e676; 
-            --theme-red: #ff3d00;
+            --bg-main: #0b111e; --bg-card: #121b2e; --border-color: #1e2d4a;
+            --text-main: #f1f5f9; --text-muted: #64748b; --theme-blue: #38bdf8;
+            --theme-green: #00e676; --theme-red: #ff3d00;
         }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: var(--bg-main); 
-            color: var(--text-main); 
-            padding: 30px; 
-            margin: 0; 
-            -webkit-font-smoothing: antialiased; 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-main); color: var(--text-main); padding: 30px; margin: 0; -webkit-font-smoothing: antialiased; }
         .container { max-width: 1400px; margin: 0 auto; }
-        .login-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: var(--bg-main); z-index: 9999; 
-            display: flex; justify-content: center; align-items: center; 
-        }
-        .login-box { 
-            background: var(--bg-card); border: 1px solid var(--border-color); padding: 40px; 
-            border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
-        }
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        .login-box { background: var(--bg-card); border: 1px solid var(--border-color); padding: 40px; border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .login-box h2 { margin-top: 0; font-size: 1.3rem; color: var(--theme-blue); margin-bottom: 25px; font-weight: 600; }
-        .login-box input { 
-            width: 100%; padding: 11px; margin-bottom: 15px; border-radius: 6px; box-sizing: border-box; 
-            border: 1px solid var(--border-color); background: #16223b; color: #fff; outline: none; 
-        }
+        .login-box input { width: 100%; padding: 11px; margin-bottom: 15px; border-radius: 6px; box-sizing: border-box; border: 1px solid var(--border-color); background: #16223b; color: #fff; outline: none; }
         .login-box button { width: 100%; background: var(--theme-blue); color: #0b111e; font-weight: bold; border: none; padding: 11px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .login-box button:hover { background: #0ea5e9; }
         .header-panel { text-align: center; margin-bottom: 25px; }
-        h1 { 
-            font-size: 2.2rem; font-weight: 700; letter-spacing: 1px; 
-            background: linear-gradient(to right, #38bdf8, #00e676); 
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; 
-        }
+        h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: 1px; background: linear-gradient(to right, #38bdf8, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
         .navigation-tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 25px; }
-        .nav-tab { 
-            background: #16223b; color: var(--text-muted); border: 1px solid var(--border-color); 
-            padding: 10px 24px; font-size: 0.95rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; 
-        }
+        .nav-tab { background: #16223b; color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 24px; font-size: 0.95rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .nav-tab:hover { color: var(--text-main); }
         .nav-tab.active { background: #1e2d4a; color: var(--theme-green); border-color: var(--theme-green); box-shadow: 0 4px 15px rgba(0,230,118,0.15); }
         .btn-wrapper { text-align: center; width: 100%; margin-bottom: 30px; display: none; }
@@ -211,8 +214,7 @@ cat << 'OUTER_EOF' > /www/speed/index.html
         .control-row button.active { background: #1e2d4a; color: var(--theme-blue); font-weight: 600; }
         .chart-grid { display: grid; grid-template-columns: 1fr; gap: 25px; }
         .chart-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; height: 380px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
-        #realtime-grid { display: grid; } 
-        #history-grid { display: none; }
+        #realtime-grid { display: grid; } #history-grid { display: none; }
     </style>
 </head>
 <body>
@@ -258,8 +260,10 @@ cat << 'OUTER_EOF' > /www/speed/index.html
         }
         if(sessionStorage.getItem("cpe_auth") === "passed") { document.getElementById('loginWall').style.display = 'none'; window.onload = initSystem; }
         let appMode = 'realtime'; let currentRange = '1h'; let currentResolution = 60; let realtimeCharts = {}; let historyCharts = {}; let realtimeTimer = null; let historyTimer = null; let previousStats = {}; let previousTime = Date.now();
-        const nameMapping = { 'TUN_TOTAL': 'SDWAN专线流量图', 'eth1': 'WAN口流量图', 'br-lan': 'LAN口流量图' };
-        const orderedInterfaces = ['TUN_TOTAL', 'eth1', 'br-lan'];
+        
+        const nameMapping = { 'TUN_TOTAL': 'SDWAN专线流量图', 'TARGET_WAN': 'WAN口流量图', 'br-lan': 'LAN口流量图' };
+        const orderedInterfaces = ['TUN_TOTAL', 'TARGET_WAN', 'br-lan'];
+
         function initSystem() { switchMode('realtime'); realtimeTimer = setInterval(loadRealtimeData, 2000); historyTimer = setInterval(loadHistoryData, 30000); }
         function switchMode(mode) {
             appMode = mode; document.getElementById('tab-realtime').classList.remove('active'); document.getElementById('tab-history').classList.remove('active');
@@ -274,7 +278,8 @@ cat << 'OUTER_EOF' > /www/speed/index.html
         async function loadRealtimeData() {
             try {
                 const res = await fetch('/cgi-bin/get_net_speed'); const currentStats = await res.json(); const now = Date.now(); const timeDelta = (now - previousTime) / 1000 || 1; previousTime = now; const gridContainer = document.getElementById('realtime-grid');
-                let activeIfaces = [...orderedInterfaces]; for (const key in currentStats) { if (!activeIfaces.includes(key) && key.startsWith('tun')) { activeIfaces.push(key); } }
+                let activeIfaces = []; orderedInterfaces.forEach(i => { if(currentStats[i]) activeIfaces.push(i); }); if(!activeIfaces.includes('TUN_TOTAL')) activeIfaces.unshift('TUN_TOTAL');
+                for (const key in currentStats) { if (!activeIfaces.includes(key) && key.startsWith('tun')) { activeIfaces.push(key); } }
                 activeIfaces.forEach(iface => {
                     let rxMbps = 0, txMbps = 0;
                     if (iface === 'TUN_TOTAL') {
@@ -299,7 +304,8 @@ cat << 'OUTER_EOF' > /www/speed/index.html
         async function loadHistoryData() {
             try {
                 const response = await fetch(`/cgi-bin/get_history_speed?${currentRange}&${currentResolution}`); const data = await response.json(); const gridContainer = document.getElementById('history-grid');
-                let activeIfaces = [...orderedInterfaces]; for (const key in data) { if (!activeIfaces.includes(key) && key.startsWith('tun')) { activeIfaces.push(key); } }
+                let activeIfaces = []; orderedInterfaces.forEach(i => { if(data[i]) activeIfaces.push(i); }); if(!activeIfaces.includes('TUN_TOTAL')) activeIfaces.unshift('TUN_TOTAL');
+                for (const key in data) { if (!activeIfaces.includes(key) && key.startsWith('tun')) { activeIfaces.push(key); } }
                 activeIfaces.forEach(iface => {
                     const records = data[iface] || [];
                     const labels = records.map(r => { let d = new Date(parseInt(r.time.replace(':', '')) * 1000); return currentResolution >= 300 ? `${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); });
@@ -331,15 +337,20 @@ cat << 'OUTER_EOF' > /www/speed/index.html
 </html>
 OUTER_EOF
 
+# 精准替换网页中的 WAN 接口动态映射
+sed -i "s/TARGET_WAN/$GLOBAL_WAN/g" /www/speed/index.html
+
 echo "========= [6/6] 正在向 OpenWrt 重新注册内核级高频计划任务模块 ========="
 # 重新将纯净的采集指令挂载入宿主机 Crontab
 (crontab -l 2>/dev/null; echo "* * * * * /usr/bin/traffic_collector.sh") | crontab -
 
-# 立即手动预热拉起一次采集器，防止初始图表为空白
-/usr/bin/traffic_collector.sh
+# 运行采集器
+sh /usr/bin/traffic_collector.sh
 
 echo "===================================================================="
-echo " 恭喜！SDWAN CPE 流量监控系统已成功执行[纯净覆盖安装]！"
-echo " 访问路径：http://<你的路由器IP>/speed/"
-echo " 预设凭证：admin / admin888"
+echo " 恭喜！跨平台流量监控系统已成功完成纯净安装与覆盖调整！"
+echo "--------------------------------------------------------------------"
+echo " 访问地址 : http://[你的路由器IP]/speed/"
+echo " 默认账号 : admin"
+echo " 默认密码 : admin888"
 echo "===================================================================="
