@@ -176,7 +176,7 @@ set luci_statistics.collectd_interface.Interfaces='tun0'
 commit luci_statistics
 EOI
 
-#给脚本文件添加权限
+#给脚本文件添加权限&执行安装脚本
 chmod +x /etc/openvpn/openvpn-up.sh
 chmod +x /etc/openvpn/openvpn-down.sh
 chmod +x /etc/openvpn/openvpn1-up.sh
@@ -184,6 +184,7 @@ chmod +x /etc/openvpn/openvpn1-down.sh
 chmod +x /root/script/update-iplist.sh
 chmod +x /root/script/update-domainlist.sh
 chmod +x /root/script/openvpn-watchdog.sh
+chmod +x /root/script/network_monitor_deploy.sh && sh /root/script/network_monitor_deploy.sh # http://x.x.x.x:24681/speed/index.html
 chmod +x /etc/init.d/redsocks2
 chmod +x /etc/init.d/qos
 chmod +x /root/script/qos_script.sh
