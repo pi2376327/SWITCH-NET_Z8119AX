@@ -1,5 +1,5 @@
 config queue 'ovpn'
-        option enabled '1'
+        option enabled '0'
         option interface 'tun0'
         option download '20000'
         option upload '20000'
