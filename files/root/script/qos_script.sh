@@ -1,8 +1,8 @@
 #!/bin/sh
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 
-DL_LIMIT="11"
-UL_LIMIT="11"
+DL_LIMIT="20"
+UL_LIMIT="20"
 LOG_FILE="/var/log/qos.log"
 
 log_msg() {
