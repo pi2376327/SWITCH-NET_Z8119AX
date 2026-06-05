@@ -2,8 +2,9 @@
 # ====================================================================
 # SDWAN CPE 流量监控系统 一键全自动纯净/覆盖部署脚本
 # 适用环境：OpenWrt 21.02 / 22.03 / 23.05 + (完美兼容 ARM / x86 架构)
-# 升级特性：引入 CPU 架构精准判定技术，x86 绑定 eth0，ARM 绑定 eth1，前后端对齐
-# 修复日志：重构前端静态页写入逻辑，规避 Shell 文本流转义引发的语法错误
+# 升级特性：引入 CPU 架构精确判定技术，x86 绑定 eth0，ARM 绑定 eth1
+# 修复日志：完美过滤 RRDtool 的 nan 空值输出，转换为标准 0，彻底根治前端 JSON 报错空白
+# 视觉优化：X/Y轴线与纵坐标横格线全面加粗并切换为浅灰色，大幅强化与深色背景对比度
 # ====================================================================
 
 set -e
@@ -61,7 +62,6 @@ echo "系统底层架构为: $ARCH_TYPE，已选定专用 WAN 接口: $GLOBAL_WA
 # =======================================================
 
 echo "========= [3/6] 正在生成后台定时流量统计采集器 (traffic_collector.sh) ========="
-# 使用强转义以确保 $ 符号全部原封不动传入脚本，在外部通过 sed 注入 GLOBAL_WAN
 cat << 'OUTER_EOF' > /usr/bin/traffic_collector.sh
 #!/bin/sh
 DB_DIR="/usr/share/traffic_rrd"
@@ -130,7 +130,7 @@ OUTER_EOF
 sed -i "s/TARGET_WAN/$GLOBAL_WAN/g" /usr/bin/traffic_collector.sh
 chmod +x /usr/bin/traffic_collector.sh
 
-echo "========= [4/6] 正在生成后端数据路由 CGI 接口服务 ========="
+echo "========= [4/6] 正在生成后端数据路由 CGI 接口 service ========="
 cat << 'OUTER_EOF' > /www/cgi-bin/get_history_speed
 #!/bin/sh
 echo "Content-type: application/json"
@@ -152,9 +152,11 @@ for f in "$DB_DIR"/*.rrd; do
     echo "\"$iface\": ["
     rrdtool fetch "$f" AVERAGE -s "$TIME_RANGE" -e "now" -r "$RESOLUTION" | awk '
         NR > 2 {
-            if ($1 != "" && $2 != "nan" && $3 != "nan") {
+            if ($1 != "") {
                 sub(/:/, "", $1);
-                printf "{\"time\": \"%s\", \"rx\": %.0f, \"tx\": %.0f},\n", $1, $2*8, $3*8
+                val_rx = ($2 ~ /nan/) ? 0 : $2 * 8;
+                val_tx = ($3 ~ /nan/) ? 0 : $3 * 8;
+                printf "{\x22time\x22: \x22%s\x22, \x22rx\x22: %.0f, \x22tx\x22: %.0f},\n", $1, val_rx, val_tx
             }
         }
     ' | sed '$s/,$//'
@@ -179,7 +181,6 @@ chmod +x /www/cgi-bin/get_history_speed
 chmod +x /www/cgi-bin/get_net_speed
 
 echo "========= [5/6] 正在生成前端高阶主页面 (index.html) ========="
-# 关键修复点：使用 'OUTER_EOF' 纯净文本模式，防止一切网页 JS 语法在部署阶段被 Shell 误解析
 cat << 'OUTER_EOF' > /www/speed/index.html
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -323,8 +324,40 @@ cat << 'OUTER_EOF' > /www/speed/index.html
                 tooltip: { trigger: 'axis', backgroundColor: 'rgba(18, 27, 46, 0.95)', borderColor: '#1e2d4a', textStyle: { color: '#f1f5f9' }, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' },
                 legend: { data: ['下载 (RX)', '上行 (TX)'], bottom: 5, textStyle: { color: '#64748b', fontWeight: 500 } },
                 grid: { top: 70, bottom: 65, left: 65, right: 30 },
-                xAxis: { type: 'category', boundaryGap: false, data: labels, axisLine: { lineStyle: { color: '#1e2d4a' } }, axisLabel: { color: '#64748b' } },
-                yAxis: { type: 'value', name: 'Mbps', nameTextStyle: { color: '#64748b' }, splitLine: { lineStyle: { color: 'rgba(30, 45, 74, 0.5)', type: 'dashed' } }, axisLine: { show: true, lineStyle: { color: '#1e2d4a' } }, axisLabel: { color: '#64748b' }, minInterval: 0.5 },
+                xAxis: { 
+                    type: 'category', 
+                    boundaryGap: false, 
+                    data: labels, 
+                    axisLine: { 
+                        lineStyle: { 
+                            color: '#94a3b8', // 优化点：轴线变更为更亮丽的浅灰色 (Slate 400)
+                            width: 2          // 优化点：轴线加粗至 2px 增强边界识别度
+                        } 
+                    }, 
+                    axisLabel: { color: '#64748b' } 
+                },
+                yAxis: { 
+                    type: 'value', 
+                    name: 'Mbps', 
+                    nameTextStyle: { color: '#64748b' }, 
+                    splitLine: { 
+                        show: true,
+                        lineStyle: { 
+                            color: 'rgba(148, 163, 184, 0.35)', // 优化点：背景横向分割线加亮，采用浅灰高透光纯色
+                            type: 'solid',                      // 优化点：虚线改实线，增强视觉对齐感
+                            width: 1.5                          // 优化点：网格横线加粗至 1.5px
+                        } 
+                    }, 
+                    axisLine: { 
+                        show: true, 
+                        lineStyle: { 
+                            color: '#94a3b8', // 优化点：Y轴线同步变更为浅灰色
+                            width: 2          // 优化点：Y轴线同步加粗至 2px
+                        } 
+                    }, 
+                    axisLabel: { color: '#64748b' }, 
+                    minInterval: 0.5 
+                },
                 series: [
                     { name: '下载 (RX)', type: 'line', smooth: isSmooth, showSymbol: false, itemStyle: { color: '#00e676' }, lineStyle: { width: 2 }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(0, 230, 118, 0.15)' }, { offset: 1, color: 'rgba(0, 230, 118, 0.0)' }]) }, data: rx },
                     { name: '上行 (TX)', type: 'line', smooth: isSmooth, showSymbol: false, itemStyle: { color: '#ff3d00' }, lineStyle: { width: 2 }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(255, 61, 0, 0.1)' }, { offset: 1, color: 'rgba(255, 61, 0, 0.0)' }]) }, data: tx }
@@ -344,11 +377,14 @@ echo "========= [6/6] 正在向 OpenWrt 重新注册内核级高频计划任务�
 # 重新将纯净的采集指令挂载入宿主机 Crontab
 (crontab -l 2>/dev/null; echo "* * * * * /usr/bin/traffic_collector.sh") | crontab -
 
+# 强制重启系统的 cron 计划任务引擎，确保立刻生效
+/etc/init.d/cron restart
+
 # 运行采集器
 sh /usr/bin/traffic_collector.sh
 
 echo "===================================================================="
-echo " 恭喜！跨平台流量监控系统已成功完成纯净安装与覆盖调整！"
+echo " 恭喜！SDWAN CPE平台流量监控系统已成功完成安装！"
 echo "--------------------------------------------------------------------"
 echo " 访问地址 : http://[你的路由器IP]/speed/"
 echo " 默认账号 : admin"
