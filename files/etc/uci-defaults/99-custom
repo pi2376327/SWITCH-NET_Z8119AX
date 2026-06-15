@@ -185,6 +185,7 @@ chmod +x /root/script/update-iplist.sh
 chmod +x /root/script/update-domainlist.sh
 chmod +x /root/script/openvpn-watchdog.sh
 chmod +x /root/script/network_monitor_deploy.sh && sh /root/script/network_monitor_deploy.sh # http://x.x.x.x:24681/speed/index.html
+chmod +x /root/script/qos_deploy.sh && sh /root/script/qos_deploy.sh
 chmod +x /etc/init.d/redsocks2
 chmod +x /etc/init.d/qos
 chmod +x /root/script/qos_script.sh
@@ -229,6 +230,5 @@ uci set wireless.default_radio0.disabled='1'
 uci commit wireless
 wifi reload
 
-/etc/init.d/qos enable #qos限速自启动
 
 exit 0
