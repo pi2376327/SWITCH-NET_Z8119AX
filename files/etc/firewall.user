@@ -17,20 +17,18 @@ iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p udp --dport 53 -j REDIRECT 
 #iptables -t nat -A PREROUTING -s 192.168.151.0/24 -p udp --dport 53 -j REDIRECT --to-ports 8844
 #iptables -t nat -C OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001 || \
 #iptables -t nat -A OUTPUT -d 8.8.4.4 -p tcp --dport 53 -j REDIRECT --to-ports 30001
-#iptables -t nat -C PREROUTING -s 192.168.152.0/24 -p udp --dport 53 -j REDIRECT --to-ports 9999 || \
-#iptables -t nat -A PREROUTING -s 192.168.152.0/24 -p udp --dport 53 -j REDIRECT --to-ports 9999
-#iptables -t nat -C OUTPUT -d 9.9.9.9 -p tcp --dport 53 -j REDIRECT --to-ports 30002 || \
-#iptables -t nat -A OUTPUT -d 9.9.9.9 -p tcp --dport 53 -j REDIRECT --to-ports 30002
-#iptables -t nat -C PREROUTING -s 192.168.153.0/24 -p udp --dport 53 -j REDIRECT --to-ports 1111 || \
-#iptables -t nat -A PREROUTING -s 192.168.153.0/24 -p udp --dport 53 -j REDIRECT --to-ports 1111
-#iptables -t nat -C OUTPUT -d 1.1.1.1 -p tcp --dport 53 -j REDIRECT --to-ports 30003 || \
-#iptables -t nat -A OUTPUT -d 1.1.1.1 -p tcp --dport 53 -j REDIRECT --to-ports 30003
-#iptables -t nat -C PREROUTING -s 192.168.154.0/24 -p udp --dport 53 -j REDIRECT --to-ports 1001 || \
-#iptables -t nat -A PREROUTING -s 192.168.154.0/24 -p udp --dport 53 -j REDIRECT --to-ports 1001
-#iptables -t nat -C OUTPUT -d 1.0.0.1 -p tcp --dport 53 -j REDIRECT --to-ports 30004 || \
-#iptables -t nat -A OUTPUT -d 1.0.0.1 -p tcp --dport 53 -j REDIRECT --to-ports 30004
 
-#iptables for FORWARD with tcp and udp
+#iptables rules for tcp traffice forward and udp traffic drop
+iptables -t nat -C PREROUTING -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30000 || \
+iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30000
+iptables -t filter -C FORWARD -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP || \
+iptables -t filter -A FORWARD -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP
+iptables -t nat -C PREROUTING -s 192.168.151.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30001 || \
+iptables -t nat -A PREROUTING -s 192.168.151.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30001
+iptables -t filter -C FORWARD -s 192.168.151.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP || \
+iptables -t filter -A FORWARD -s 192.168.151.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP
+
+#iptables for FORWARD with tcp and udp | old
 #iptables -t mangle -C PREROUTING -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2 || \
 #iptables -t mangle -I PREROUTING -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2
 #iptables -t mangle -C PREROUTING -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2 || \
