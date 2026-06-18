@@ -12,4 +12,7 @@ ipset restore -f /root/script/chnroute-ipset
 #ip route add local 0.0.0.0/0 dev lo table 300
 #ip rule add fwmark 2 table 300 
 
+#Install Nexttrace
+wget -O /usr/bin/nexttrace https://github.com/nxtrace/NTrace-core/releases/download/v1.7.1/nexttrace_linux_arm64 && chmod +x /usr/bin/nexttrace 
+
 exit 0
