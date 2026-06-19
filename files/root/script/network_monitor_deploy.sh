@@ -1,15 +1,16 @@
 #!/bin/sh
 # ====================================================================
-# SDWAN CPE 流量监控系统 一键全自动纯净/覆盖部署脚本
-# 适用环境：OpenWrt 21.02 / 22.03 / 23.05 + (完美兼容 ARM / x86 架构)
-# 升级特性：引入 CPU 架构精确判定技术，x86 绑定 eth0，ARM 绑定 eth1
-# 修复日志：完美过滤 RRDtool 的 nan 空值输出，转换为标准 0，彻底根治前端 JSON 报错空白
-# 视觉优化：X/Y轴线与纵坐标横格线全面加粗并切换为浅灰色，大幅强化与深色背景对比度
+# SDWAN CPE 流量监控系统 一键全自动纯净/覆盖部署脚本 (双 IFB 专线聚合版)
+# 适用环境：OpenWrt 21.02 / 22.03 / 23.05 +
+# 优化策略：
+#   1. 完全移除不可靠的单个 tun 接口和累加逻辑，由物理总线和虚拟中转池直算。
+#   2. 完美对接 IFB 架构：监控 ifb0 的 TX 作为下载，ifb1 的 TX 作为上传。
+#   3. GAUGE 模式高保真存储，彻底根治接口重启产生的数据溢出毛刺。
 # ====================================================================
 
 set -e
 
-echo "========= [1/6] 正在执行旧版本残余清理（强制复写准备） ========="
+echo "========= [1/6] 正在执行旧版本残余清理及数据库重置 ========="
 
 # 1. 安全从计划任务中剔除旧的采集器
 if crontab -l 2>/dev/null | grep -q "traffic_collector.sh"; then
@@ -65,15 +66,19 @@ echo "========= [3/6] 正在生成后台定时流量统计采集器 (traffic_col
 cat << 'OUTER_EOF' > /usr/bin/traffic_collector.sh
 #!/bin/sh
 DB_DIR="/usr/share/traffic_rrd"
+CACHE_DIR="/tmp/traffic_cache"
 mkdir -p "$DB_DIR"
+mkdir -p "$CACHE_DIR"
+
+# 物理和核心局域网接口
 INTERFACES="TARGET_WAN br-lan"
 
 init_rrd() {
     local iface=$1
     if [ ! -f "$DB_DIR/$iface.rrd" ]; then
         rrdtool create "$DB_DIR/$iface.rrd" --step 60 \
-            DS:rx:COUNTER:120:0:U \
-            DS:tx:COUNTER:120:0:U \
+            DS:rx:GAUGE:120:0:U \
+            DS:tx:GAUGE:120:0:U \
             RRA:AVERAGE:0.5:1:4320 \
             RRA:AVERAGE:0.5:5:8640 \
             RRA:AVERAGE:0.5:30:5760 \
@@ -86,51 +91,70 @@ get_bytes() {
     awk -v ifn="$iface" '$1 ~ "^"ifn":" {print $2, $10}' /proc/net/dev
 }
 
+calc_speed() {
+    local key=$1
+    local current_rx=$2
+    local current_tx=$3
+    local cache_file="$CACHE_DIR/$key.cache"
+    
+    if [ -f "$cache_file" ]; then
+        read -r last_time last_rx last_tx < "$cache_file"
+        local now=$(date +%s)
+        local time_delta=$((now - last_time))
+        if [ $time_delta -gt 0 ] && [ $current_rx -ge $last_rx ] && [ $current_tx -ge $last_tx ]; then
+            local rx_speed_scaled=$(( (current_rx - last_rx) * 8 * 100 / time_delta / 1024 / 1024 ))
+            local tx_speed_scaled=$(( (current_tx - last_tx) * 8 * 100 / time_delta / 1024 / 1024 ))
+            
+            rx_speed=$(awk -v s=$rx_speed_scaled 'BEGIN {printf "%.2f", s/100}')
+            tx_speed=$(awk -v s=$tx_speed_scaled 'BEGIN {printf "%.2f", s/100}')
+        else
+            rx_speed="0.00"
+            tx_speed="0.00"
+        fi
+    else
+        rx_speed="0.00"
+        tx_speed="0.00"
+    fi
+    echo "$(date +%s) $current_rx $current_tx" > "$cache_file"
+}
+
+# 初始化固定的三个监控数据库
 for i in $INTERFACES TUN_TOTAL; do init_rrd "$i"; done
 
-for tun in $(awk -F: 'NR>2 {print $1}' /proc/net/dev | tr -d ' ' | grep '^tun'); do 
-    init_rrd "$tun"; 
-done
-
+# 1. 采集标准物理和局域网网口
 for iface in $INTERFACES; do
     stats=$(get_bytes "$iface")
     if [ -n "$stats" ]; then
         rx=$(echo "$stats" | awk '{print $1}')
         tx=$(echo "$stats" | awk '{print $2}')
-        [ -z "$rx" ] && rx=0
-        [ -z "$tx" ] && tx=0
-        rrdtool update "$DB_DIR/$iface.rrd" N:"$rx":"$tx"
+        calc_speed "$iface" "$rx" "$tx"
+        rrdtool update "$DB_DIR/$iface.rrd" N:"$rx_speed":"$tx_speed"
     fi
 done
 
-total_rx=0
-total_tx=0
+# 2. 采集双 IFB 中转池数据并精密合成为专线总流量
+# ifb0 的 TX 代表所有 tun 的明文下载(Download/RX)
+# ifb1 的 TX 代表所有 tun 的明文上传(Upload/TX)
+ifb0_stats=$(get_bytes "ifb0")
+ifb1_stats=$(get_bytes "ifb1")
 
-for tun in $(awk -F: 'NR>2 {print $1}' /proc/net/dev | tr -d ' ' | grep '^tun'); do
-    stats=$(get_bytes "$tun")
-    if [ -n "$stats" ]; then
-        rx=$(echo "$stats" | awk '{print $1}')
-        tx=$(echo "$stats" | awk '{print $2}')
-        rx=${rx:-0}
-        tx=${tx:-0}
-        echo "$rx" | grep -q '^[0-9]\+$' || rx=0
-        echo "$tx" | grep -q '^[0-9]\+$' || tx=0
-        rrdtool update "$DB_DIR/$tun.rrd" N:"$rx":"$tx" 2>/dev/null || true
-        total_rx=$((total_rx + rx))
-        total_tx=$((total_tx + tx))
-    fi
-done
+# 兜底确保提取到数据，若未启动则赋予 0
+ifb0_tx=$(echo "$ifb0_stats" | awk '{print $2}')
+[ -z "$ifb0_tx" ] && ifb0_tx=0
 
-if [ $total_rx -gt 0 ] || [ $total_tx -gt 0 ]; then
-    rrdtool update "$DB_DIR/TUN_TOTAL.rrd" N:"$total_rx":"$total_tx"
-fi
+ifb1_tx=$(echo "$ifb1_stats" | awk '{print $2}')
+[ -z "$ifb1_tx" ] && ifb1_tx=0
+
+# 利用两手数据换算并归档至专线库
+calc_speed "TUN_TOTAL" "$ifb0_tx" "$ifb1_tx"
+rrdtool update "$DB_DIR/TUN_TOTAL.rrd" N:"$rx_speed":"$tx_speed"
 OUTER_EOF
 
 # 精准替换采集器中的 WAN 接口标识
 sed -i "s/TARGET_WAN/$GLOBAL_WAN/g" /usr/bin/traffic_collector.sh
 chmod +x /usr/bin/traffic_collector.sh
 
-echo "========= [4/6] 正在生成后端数据路由 CGI 接口 service ========="
+echo "========= [4/6] 正在生成后端数据路由 CGI 接口服务 ========="
 cat << 'OUTER_EOF' > /www/cgi-bin/get_history_speed
 #!/bin/sh
 echo "Content-type: application/json"
@@ -144,9 +168,10 @@ fi
 DB_DIR="/usr/share/traffic_rrd"
 echo "{"
 first=1
-for f in "$DB_DIR"/*.rrd; do
-    [ -e "$f" ] || continue
-    iface=$(basename "$f" .rrd)
+# 固定读取需要的三个 RRD 库文件
+for iface in TUN_TOTAL TARGET_WAN br-lan; do
+    f="$DB_DIR/$iface.rrd"
+    [ -f "$f" ] || continue
     if [ $first -ne 1 ]; then echo ","; fi
     first=0
     echo "\"$iface\": ["
@@ -154,9 +179,9 @@ for f in "$DB_DIR"/*.rrd; do
         NR > 2 {
             if ($1 != "") {
                 sub(/:/, "", $1);
-                val_rx = ($2 ~ /nan/) ? 0 : $2 * 8;
-                val_tx = ($3 ~ /nan/) ? 0 : $3 * 8;
-                printf "{\x22time\x22: \x22%s\x22, \x22rx\x22: %.0f, \x22tx\x22: %.0f},\n", $1, val_rx, val_tx
+                val_rx = ($2 ~ /nan/) ? 0 : $2;
+                val_tx = ($3 ~ /nan/) ? 0 : $3;
+                printf "{\x22time\x22: \x22%s\x22, \x22rx\x22: %.2f, \x22tx\x22: %.2f},\n", $1, val_rx, val_tx
             }
         }
     ' | sed '$s/,$//'
@@ -170,6 +195,7 @@ cat << 'OUTER_EOF' > /www/cgi-bin/get_net_speed
 echo "Content-type: application/json"
 echo ""
 echo "{"
+# 实时提取接口字节计数，将 ifb 处理逻辑融入前端或统一后端计算
 awk 'NR > 2 {
     sub(/:/, "", $1);
     printf "\"%s\": {\"rx\": %s, \"tx\": %s},\n", $1, $2, $10
@@ -265,7 +291,26 @@ cat << 'OUTER_EOF' > /www/speed/index.html
         const nameMapping = { 'TUN_TOTAL': 'SDWAN专线流量图', 'TARGET_WAN': 'WAN口流量图', 'br-lan': 'LAN口流量图' };
         const orderedInterfaces = ['TUN_TOTAL', 'TARGET_WAN', 'br-lan'];
 
-        function initSystem() { switchMode('realtime'); realtimeTimer = setInterval(loadRealtimeData, 2000); historyTimer = setInterval(loadHistoryData, 30000); }
+        function initSystem() { 
+            // 纯净初始化：固定生成三个卡片容器
+            const rtGrid = document.getElementById('realtime-grid');
+            const hiGrid = document.getElementById('history-grid');
+            rtGrid.innerHTML = ''; hiGrid.innerHTML = '';
+            
+            orderedInterfaces.forEach(iface => {
+                const cardRt = document.createElement('div'); cardRt.className = 'chart-card'; cardRt.id = `rt-chart-${iface}`; rtGrid.appendChild(cardRt);
+                realtimeCharts[iface] = echarts.init(cardRt, 'dark');
+                realtimeCharts[iface].timeline = new Array(30).fill(''); realtimeCharts[iface].rxTrack = new Array(30).fill(0); realtimeCharts[iface].txTrack = new Array(30).fill(0);
+                
+                const cardHi = document.createElement('div'); cardHi.className = 'chart-card'; cardHi.id = `hi-chart-${iface}`; hiGrid.appendChild(cardHi);
+                historyCharts[iface] = echarts.init(cardHi, 'dark');
+            });
+
+            switchMode('realtime'); 
+            realtimeTimer = setInterval(loadRealtimeData, 2000); 
+            historyTimer = setInterval(loadHistoryData, 30000); 
+        }
+
         function switchMode(mode) {
             appMode = mode; document.getElementById('tab-realtime').classList.remove('active'); document.getElementById('tab-history').classList.remove('active');
             if(mode === 'realtime') {
@@ -276,25 +321,27 @@ cat << 'OUTER_EOF' > /www/speed/index.html
                 for (let k in historyCharts) { historyCharts[k].resize(); } loadHistoryData();
             }
         }
+
         async function loadRealtimeData() {
             try {
-                const res = await fetch('/cgi-bin/get_net_speed'); const currentStats = await res.json(); const now = Date.now(); const timeDelta = (now - previousTime) / 1000 || 1; previousTime = now; const gridContainer = document.getElementById('realtime-grid');
-                let activeIfaces = []; orderedInterfaces.forEach(i => { if(currentStats[i]) activeIfaces.push(i); }); if(!activeIfaces.includes('TUN_TOTAL')) activeIfaces.unshift('TUN_TOTAL');
-                for (const key in currentStats) { if (!activeIfaces.includes(key) && key.startsWith('tun')) { activeIfaces.push(key); } }
-                activeIfaces.forEach(iface => {
+                const res = await fetch('/cgi-bin/get_net_speed'); const currentStats = await res.json(); 
+                const now = Date.now(); const timeDelta = (now - previousTime) / 1000 || 1; previousTime = now;
+                
+                orderedInterfaces.forEach(iface => {
                     let rxMbps = 0, txMbps = 0;
                     if (iface === 'TUN_TOTAL') {
-                        let tunRxBps = 0, tunTxBps = 0; for (const key in currentStats) { if (key.startsWith('tun')) { const curTun = currentStats[key]; const prvTun = previousStats[key] || curTun; tunRxBps += (curTun.rx - prvTun.rx); tunTxBps += (curTun.tx - prvTun.tx); } }
-                        rxMbps = parseFloat((tunRxBps * 8 / timeDelta / 1024 / 1024).toFixed(2)); txMbps = parseFloat((tunTxBps * 8 / timeDelta / 1024 / 1024).toFixed(2));
+                        // 核心重构：专线下载取决于 ifb0 的 TX；专线上传取决于 ifb1 的 TX
+                        const curIfb0 = currentStats['ifb0'] || {tx:0}; const prvIfb0 = previousStats['ifb0'] || curIfb0;
+                        const curIfb1 = currentStats['ifb1'] || {tx:0}; const prvIfb1 = previousStats['ifb1'] || curIfb1;
+                        rxMbps = parseFloat((((curIfb0.tx - prvIfb0.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                        txMbps = parseFloat((((curIfb1.tx - prvIfb1.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
                     } else {
                         const current = currentStats[iface] || {rx:0, tx:0}; const prev = previousStats[iface] || current;
-                        rxMbps = parseFloat((((current.rx - prev.rx) * 8 / timeDelta) / 1024 / 1024).toFixed(2)); txMbps = parseFloat((((current.tx - prev.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                        rxMbps = parseFloat((((current.rx - prev.rx) * 8 / timeDelta) / 1024 / 1024).toFixed(2)); 
+                        txMbps = parseFloat((((current.tx - prev.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
                     }
                     if (rxMbps < 0 || isNaN(rxMbps)) rxMbps = 0; if (txMbps < 0 || isNaN(txMbps)) txMbps = 0;
-                    if (!realtimeCharts[iface]) {
-                        const card = document.createElement('div'); card.className = 'chart-card'; card.id = `rt-chart-${iface}`; gridContainer.appendChild(card); realtimeCharts[iface] = echarts.init(card, 'dark');
-                        realtimeCharts[iface].timeline = new Array(30).fill(''); realtimeCharts[iface].rxTrack = new Array(30).fill(0); realtimeCharts[iface].txTrack = new Array(30).fill(0);
-                    }
+                    
                     const c = realtimeCharts[iface]; const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
                     c.timeline.shift(); c.timeline.push(timeStr); c.rxTrack.shift(); c.rxTrack.push(rxMbps); c.txTrack.shift(); c.txTrack.push(txMbps);
                     renderEChart(realtimeCharts[iface], iface, c.timeline, c.rxTrack, c.txTrack, true);
@@ -302,61 +349,36 @@ cat << 'OUTER_EOF' > /www/speed/index.html
                 previousStats = currentStats;
             } catch (e) { console.error(e); }
         }
+
         async function loadHistoryData() {
             try {
-                const response = await fetch(`/cgi-bin/get_history_speed?${currentRange}&${currentResolution}`); const data = await response.json(); const gridContainer = document.getElementById('history-grid');
-                let activeIfaces = []; orderedInterfaces.forEach(i => { if(data[i]) activeIfaces.push(i); }); if(!activeIfaces.includes('TUN_TOTAL')) activeIfaces.unshift('TUN_TOTAL');
-                for (const key in data) { if (!activeIfaces.includes(key) && key.startsWith('tun')) { activeIfaces.push(key); } }
-                activeIfaces.forEach(iface => {
+                const response = await fetch(`/cgi-bin/get_history_speed?${currentRange}&${currentResolution}`); const data = await response.json();
+                orderedInterfaces.forEach(iface => {
                     const records = data[iface] || [];
                     const labels = records.map(r => { let d = new Date(parseInt(r.time.replace(':', '')) * 1000); return currentResolution >= 300 ? `${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); });
-                    const rxData = records.map(r => parseFloat((r.rx / 1024 / 1024).toFixed(2))); const txData = records.map(r => parseFloat((r.tx / 1024 / 1024).toFixed(2)));
-                    if (!historyCharts[iface]) { const card = document.createElement('div'); card.className = 'chart-card'; card.id = `hi-chart-${iface}`; gridContainer.appendChild(card); historyCharts[iface] = echarts.init(card, 'dark'); }
+                    const rxData = records.map(r => r.rx); const txData = records.map(r => r.tx);
                     renderEChart(historyCharts[iface], iface, labels, rxData, txData, false);
                 });
             } catch (e) { console.error(e); }
         }
-        function changeHistoryRange(range, resolution, btn) { currentRange = range; currentResolution = resolution; document.querySelectorAll('.control-row button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.getElementById('history-grid').innerHTML = ''; historyCharts = {}; loadHistoryData(); }
+
+        function changeHistoryRange(range, resolution, btn) { currentRange = range; currentResolution = resolution; document.querySelectorAll('.control-row button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); loadHistoryData(); }
+        
         function renderEChart(chartInstance, iface, labels, rx, tx, isSmooth) {
-            let labelName = nameMapping[iface] || `TUN口流量图 (${iface})`;
+            let labelName = nameMapping[iface] || iface;
             chartInstance.setOption({
                 backgroundColor: 'transparent', title: { text: labelName, left: 'center', top: 5, textStyle: { color: '#f1f5f9', fontSize: 16, fontWeight: 'bold' } },
                 tooltip: { trigger: 'axis', backgroundColor: 'rgba(18, 27, 46, 0.95)', borderColor: '#1e2d4a', textStyle: { color: '#f1f5f9' }, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' },
                 legend: { data: ['下载 (RX)', '上行 (TX)'], bottom: 5, textStyle: { color: '#64748b', fontWeight: 500 } },
                 grid: { top: 70, bottom: 65, left: 65, right: 30 },
                 xAxis: { 
-                    type: 'category', 
-                    boundaryGap: false, 
-                    data: labels, 
-                    axisLine: { 
-                        lineStyle: { 
-                            color: '#94a3b8', // 优化点：轴线变更为更亮丽的浅灰色 (Slate 400)
-                            width: 2          // 优化点：轴线加粗至 2px 增强边界识别度
-                        } 
-                    }, 
-                    axisLabel: { color: '#64748b' } 
+                    type: 'category', boundaryGap: false, data: labels, 
+                    axisLine: { lineStyle: { color: '#94a3b8', width: 2 } }, axisLabel: { color: '#64748b' } 
                 },
                 yAxis: { 
-                    type: 'value', 
-                    name: 'Mbps', 
-                    nameTextStyle: { color: '#64748b' }, 
-                    splitLine: { 
-                        show: true,
-                        lineStyle: { 
-                            color: 'rgba(148, 163, 184, 0.35)', // 优化点：背景横向分割线加亮，采用浅灰高透光纯色
-                            type: 'solid',                      // 优化点：虚线改实线，增强视觉对齐感
-                            width: 1.5                          // 优化点：网格横线加粗至 1.5px
-                        } 
-                    }, 
-                    axisLine: { 
-                        show: true, 
-                        lineStyle: { 
-                            color: '#94a3b8', // 优化点：Y轴线同步变更为浅灰色
-                            width: 2          // 优化点：Y轴线同步加粗至 2px
-                        } 
-                    }, 
-                    axisLabel: { color: '#64748b' }, 
-                    minInterval: 0.5 
+                    type: 'value', name: 'Mbps', nameTextStyle: { color: '#64748b' }, 
+                    splitLine: { show: true, lineStyle: { color: 'rgba(148, 163, 184, 0.35)', type: 'solid', width: 1.5 } }, 
+                    axisLine: { show: true, lineStyle: { color: '#94a3b8', width: 2 } }, axisLabel: { color: '#64748b' }, minInterval: 0.5 
                 },
                 series: [
                     { name: '下载 (RX)', type: 'line', smooth: isSmooth, showSymbol: false, itemStyle: { color: '#00e676' }, lineStyle: { width: 2 }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(0, 230, 118, 0.15)' }, { offset: 1, color: 'rgba(0, 230, 118, 0.0)' }]) }, data: rx },
@@ -380,13 +402,11 @@ echo "========= [6/6] 正在向 OpenWrt 重新注册内核级高频计划任务�
 # 强制重启系统的 cron 计划任务引擎，确保立刻生效
 /etc/init.d/cron restart
 
-# 运行采集器
+# 运行初始化采集
 sh /usr/bin/traffic_collector.sh
 
 echo "===================================================================="
-echo " 恭喜！SDWAN CPE平台流量监控系统已成功完成安装！"
+echo " 恭喜！基于双 IFB 的精简专线监控系统已全自动升级覆盖部署完成！"
 echo "--------------------------------------------------------------------"
 echo " 访问地址 : http://[你的路由器IP]/speed/"
-echo " 默认账号 : admin"
-echo " 默认密码 : admin888"
 echo "===================================================================="
