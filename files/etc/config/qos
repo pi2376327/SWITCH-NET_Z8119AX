@@ -1,0 +1,4 @@
+config qos 'global'
+        option enabled '1'
+        option download '10240'
+        option upload '10240'
