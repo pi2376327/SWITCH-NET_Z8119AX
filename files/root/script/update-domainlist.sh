@@ -20,6 +20,8 @@ else
     #cp -a /tmp/smartdns/address.conf /root/script/cndomainlist.conf
     mv -f /tmp/smartdns/address.conf /etc/smartdns/address.conf
     echo $DATE: The conversion of the file to a smartDNS .conf format has been completed.
+    echo "nameserver /ztna-dingtalk.com/china" >> /etc/smartdns/address.conf
+    echo "nameserver /lydaas.com/china" >> /etc/smartdns/address.conf
 
     # Delete the tmp files
     rm -rf /tmp/smartdns/
