@@ -187,9 +187,8 @@ chmod +x /root/script/openvpn-watchdog.sh
 chmod +x /root/script/network_monitor_deploy.sh && sh /root/script/network_monitor_deploy.sh # http://x.x.x.x:24681/speed/index.html
 chmod +x /root/script/qos_deploy.sh && sh /root/script/qos_deploy.sh
 chmod +x /etc/init.d/redsocks2
-chmod +x /etc/init.d/qos
-chmod +x /root/script/qos_script.sh
-chmod +x /etc/hotplug.d/iface/95-qos-auto
+chmod +x /etc/openvpn/checkpsw.sh
+mkdir /etc/openvpn/ccd
 #touch ~/.vimrc
 ln -s /usr/share/vim/vimrc /usr/share/vim/defaults.vim  #修复vim bug
 rm -rf /etc/resolv.conf  #删除默认wan口dns地址
