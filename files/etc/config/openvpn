@@ -55,7 +55,7 @@ config openvpn 'client1'
         option route_nopull '1'
 
 config openvpn 'server'
-        option enabled '1'
+        option enabled '0'
         option mode 'server'
         option topology 'subnet'
         option local '0.0.0.0'
