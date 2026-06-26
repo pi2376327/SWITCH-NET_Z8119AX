@@ -26,4 +26,4 @@ git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-a
 git clone https://github.com/pi2376327/openwrt-redsocks2.git package/redsocks2
 
 #download binary NextTrace
-wget -O files/usr/bin/nexttrace https://github.com/nxtrace/NTrace-core/releases/download/v1.7.1/nexttrace_linux_arm64 && chmod +x /usr/bin/nexttrace 
+#wget -O files/usr/bin/nexttrace https://github.com/nxtrace/NTrace-core/releases/download/v1.7.1/nexttrace_linux_arm64 && chmod +x /usr/bin/nexttrace 
