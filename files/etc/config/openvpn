@@ -87,4 +87,5 @@ config openvpn 'server'
         option mute '10'
         option script_security '3'
         option auth_user_pass_verify '/etc/openvpn/checkpsw.sh via-env'
+        #option duplicate_cn '1'
 
