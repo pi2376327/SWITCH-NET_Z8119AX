@@ -85,7 +85,6 @@ config openvpn 'server'
         option status '/etc/openvpn/openvpn-status.log 10'
         option status_version '1'
         option mute '10'
-        option comp_lzo 'no'
         option script_security '3'
         option auth_user_pass_verify '/etc/openvpn/checkpsw.sh via-env'
 
