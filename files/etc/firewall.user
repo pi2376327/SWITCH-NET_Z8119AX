@@ -21,12 +21,12 @@ iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p udp --dport 53 -j REDIRECT 
 #iptables rules for tcp traffice forward and udp traffic drop
 #iptables -t nat -C PREROUTING -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30000 || \
 #iptables -t nat -A PREROUTING -s 192.168.150.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30000
-#iptables -t filter -C FORWARD -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP || \
-#iptables -t filter -A FORWARD -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP
+#iptables -t filter -C FORWARD -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j  --reject-with icmp-port-unreachable || \
+#iptables -t filter -A FORWARD -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j  --reject-with icmp-port-unreachable
 #iptables -t nat -C PREROUTING -s 192.168.151.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30001 || \
 #iptables -t nat -A PREROUTING -s 192.168.151.0/24 -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 30001
-#iptables -t filter -C FORWARD -s 192.168.151.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP || \
-#iptables -t filter -A FORWARD -s 192.168.151.0/24 -p udp -m set ! --match-set chnroute dst -j  DROP
+#iptables -t filter -C FORWARD -s 192.168.151.0/24 -p udp -m set ! --match-set chnroute dst -j  --reject-with icmp-port-unreachable || \
+#iptables -t filter -A FORWARD -s 192.168.151.0/24 -p udp -m set ! --match-set chnroute dst -j  --reject-with icmp-port-unreachable
 
 #iptables for FORWARD with tcp and udp | old
 #iptables -t mangle -C PREROUTING -s 192.168.150.0/24 -p udp -m set ! --match-set chnroute dst -j TPROXY --on-port 30000 --tproxy-mark 2 || \
