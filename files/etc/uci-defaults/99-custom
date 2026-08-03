@@ -184,8 +184,7 @@ chmod +x /etc/openvpn/openvpn1-down.sh
 chmod +x /root/script/update-iplist.sh
 chmod +x /root/script/update-domainlist.sh
 chmod +x /root/script/openvpn-watchdog.sh
-chmod +x /root/script/network_monitor_deploy.sh && sh /root/script/network_monitor_deploy.sh # http://x.x.x.x:24681/speed/index.html
-chmod +x /root/script/qos_deploy.sh && sh /root/script/qos_deploy.sh
+chmod +x /root/cpe-web/deploy_cpe_admin.sh && sh /root/cpe-web/deploy_cpe_admin.sh --skip-deps
 chmod +x /etc/init.d/redsocks2
 chmod +x /etc/openvpn/checkpsw.sh
 mkdir /etc/openvpn/ccd
