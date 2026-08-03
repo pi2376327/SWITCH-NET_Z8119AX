@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/cpe/assets/favicon.png">
+    <title>WiFi 配置</title>
+    <style>
+        :root {
+            --bg-main: #f3f6fb;
+            --bg-card: #ffffff;
+            --border-color: #dfe7f3;
+            --text-main: #071b3a;
+            --text-muted: #64748b;
+            --theme-blue: #3568b7;
+            --theme-green: #18a178;
+            --theme-red: #d94a38;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 30px;
+            margin: 0;
+        }
+        .container {
+            max-width: none;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin: 0;
+            color: var(--text-main);
+        }
+        .btn-add {
+            background: var(--theme-blue);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .section-title {
+            color: var(--theme-blue);
+            font-size: 1.2rem;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--theme-blue);
+            padding-left: 10px;
+        }
+        .section-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        .section-title-row .section-title {
+            margin: 0;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 25px;
+            box-shadow: 0 12px 30px rgba(29, 53, 87, .08);
+        }
+        #radios-container {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        #networks-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(720px, 1fr));
+            gap: 20px;
+            align-items: start;
+        }
+        #networks-container .card { margin-bottom: 0; }
+        #radios-container .card {
+            margin-bottom: 0;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-height: 0;
+        }
+        #radios-container .form-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        #radios-container .card-actions {
+            margin-top: 16px;
+        }
+        @media (max-width: 768px) {
+            #radios-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        .card-header h2 {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 1.2rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 15px;
+        }
+        #radios-container .form-grid { grid-template-columns: 1fr; }
+        @media (max-width: 1180px) {
+            #networks-container { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+            #radios-container .form-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-group-full {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        input, select, textarea {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+        }
+        textarea {
+            resize: vertical;
+            height: 80px;
+            font-family: monospace;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--theme-blue);
+            outline: none;
+        }
+        .password-row {
+            display: inline-grid;
+            grid-template-columns: minmax(180px, 280px) 30px;
+            gap: 6px;
+            align-items: center;
+            max-width: 320px;
+            width: 100%;
+        }
+        .password-toggle {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #eaf1fb;
+            color: var(--theme-blue);
+            cursor: pointer;
+        }
+        .eye-icon {
+            position: relative;
+            display: block;
+            width: 16px;
+            height: 9px;
+            margin: 0 auto;
+            border: 1.5px solid currentColor;
+            border-radius: 50%;
+        }
+        .eye-icon::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 4px;
+            height: 4px;
+            background: currentColor;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .password-toggle.is-visible .eye-icon::before {
+            content: "";
+            position: absolute;
+            left: -2px;
+            top: 4px;
+            width: 20px;
+            height: 1.5px;
+            background: currentColor;
+            transform: rotate(-38deg);
+            transform-origin: center;
+        }
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .btn-save {
+            background: var(--theme-blue);
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-left: auto;
+        }
+        .btn-del {
+            background: #fff2f0;
+            color: var(--theme-red);
+            border: 1px solid var(--theme-red);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            width: 450px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            color: var(--theme-blue);
+            margin-bottom: 20px;
+        }
+        .modal-content .form-group {
+            margin-bottom: 15px;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-cancel {
+            background: #eaf1fb;
+            color: var(--theme-blue);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            color: #13BB8A;
+            padding: 12px 20px;
+            border: 1px solid #b9eadb;
+            border-radius: 8px;
+            box-shadow: 0 14px 34px rgba(15, 65, 55, .18);
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1001;
+            text-shadow: 0 1px 8px rgba(255,255,255,.9);
+        }
+        .toast.show { opacity: 1; }
+        .page-lock, .confirm-layer {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(3, 7, 18, 0.64);
+            z-index: 1000;
+        }
+        .page-lock.active, .confirm-layer.active { display: flex; }
+        .page-lock-box, .confirm-box {
+            min-width: 180px;
+            max-width: 360px;
+            padding: 20px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 18px 42px rgba(0,0,0,.35);
+        }
+        .confirm-box p { margin: 0 0 18px; }
+        .confirm-actions { display:flex; gap:10px; justify-content:center; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast">无线配置已保存并应用，正在重启无线服务...</div>
+    <div id="pageLock" class="page-lock"><div class="page-lock-box">请稍后</div></div>
+    <div id="confirmLayer" class="confirm-layer">
+        <div class="confirm-box">
+            <p id="confirmText">确定执行该操作吗？</p>
+            <div class="confirm-actions">
+                <button class="btn-cancel" onclick="resolveConfirm(false)">取消</button>
+                <button class="btn-del" onclick="resolveConfirm(true)">确定</button>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="header-row">
+            <h1>WIFI配置</h1>
+        </div>
+
+        <div class="section-title" id="radio-title">无线物理设备 (Radio)</div>
+        <div id="radios-container"></div>
+
+        <div class="section-title-row">
+            <div class="section-title" id="ssid-title">无线 SSID 接口</div>
+            <button class="btn-add" id="ssid-add-btn" onclick="openAddModal()">+ 新增无线接口</button>
+        </div>
+        <div id="networks-container"></div>
+    </div>
+
+    <!-- Add WiFi Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <h3>新增无线网络</h3>
+            <div class="form-group">
+                <label>SSID 名称</label>
+                <input type="text" id="add_ssid" placeholder="例如: CPE-WIFI">
+            </div>
+            <div class="form-group">
+                <label>分配无线物理设备 (Radio)</label>
+                <select id="add_device"></select>
+            </div>
+            <div class="form-group">
+                <label>绑定网络接口</label>
+                <select id="add_network" onchange="toggleAddNetworkCustom()">
+                    <option value="lan">lan</option>
+                    <option value="wan">wan</option>
+                </select>
+                <input type="text" id="add_network_custom" placeholder="输入自定义逻辑接口名称" style="display:none; margin-top: 8px;">
+            </div>
+            <div class="form-group">
+                <label>加密方式</label>
+                <select id="add_encryption" onchange="toggleAddKeyField()">
+                    <option value="none">none (无密码)</option>
+                    <option value="psk2">WPA2-PSK</option>
+                    <option value="psk-mixed">WPA/WPA2-PSK 混合</option>
+                    <option value="sae">WPA3-SAE</option>
+                    <option value="sae-mixed">WPA2/WPA3-SAE 混合</option>
+                </select>
+            </div>
+            <div class="form-group" id="add_key_group">
+                <label>WiFi 密码</label>
+                <div class="password-row">
+                    <input type="password" id="add_key" placeholder="at least 8 characters">
+                    <button type="button" class="password-toggle" onclick="togglePassword('add_key', this)" title="显示/隐藏密码"><span class="eye-icon"></span></button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>MAC 过滤模式</label>
+                <select id="add_macfilter">
+                    <option value="disabled">禁用</option>
+                    <option value="allow">仅允许列表内 MAC (白名单)</option>
+                    <option value="deny">仅拒绝列表内 MAC (黑名单)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>MAC 地址列表 (每行一个)</label>
+                <textarea id="add_maclist" placeholder="AA:BB:CC:DD:EE:FF&#10;11:22:33:44:55:66"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button onclick="submitAdd()" style="background:var(--theme-green); color:#000; font-weight:bold; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rawFetch = window.fetch.bind(window);
+        window.fetch = (url, opts = {}) => {
+            const token = localStorage.getItem("cpe_token");
+            opts.headers = Object.assign({}, opts.headers || {}, token ? {"X-CPE-Token": token} : {});
+            if (token && typeof url === 'string' && url.indexOf('/cgi-bin/') === 0 && url.indexOf('_cpe_token=') === -1) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + '_cpe_token=' + encodeURIComponent(token);
+            }
+            return rawFetch(url, opts);
+        };
+        const loggedInRole = localStorage.getItem("cpe_role");
+        const isAdmin = loggedInRole === "admin";
+        let wifiConfig = {};
+        let networkConfig = {};
+        let originalWifiText = "";
+        let confirmResolver = null;
+
+        async function init() {
+            try {
+                const [resWifi, resNetwork] = await Promise.all([
+                    fetch('/cgi-bin/cpe_api.sh?action=get_wifi'),
+                    fetch('/cgi-bin/cpe_api.sh?action=get_network')
+                ]);
+                originalWifiText = await resWifi.text();
+                const networkText = await resNetwork.text();
+                if (originalWifiText.indexOf('unauthorized') !== -1 || networkText.indexOf('unauthorized') !== -1) {
+                    handleSessionExpired();
+                    return;
+                }
+                wifiConfig = parseUciShow(originalWifiText);
+                networkConfig = parseUciShow(networkText);
+                
+                document.getElementById('radios-container').style.display = isAdmin ? 'grid' : 'none';
+                document.getElementById('radio-title').style.display = isAdmin ? 'block' : 'none';
+                document.getElementById('ssid-add-btn').style.display = isAdmin ? 'inline-block' : 'none';
+                if (isAdmin) renderRadios();
+                renderSSIDs();
+            } catch (e) {
+                alert("加载配置失败，请检查网络或后端服务");
+            }
+        }
+
+        function handleSessionExpired() {
+            alert('请重新登录');
+            localStorage.removeItem('cpe_auth');
+            localStorage.removeItem('cpe_role');
+            localStorage.removeItem('cpe_token');
+            window.top.location.reload();
+        }
+
+        function uciQuote(value) {
+            value = String(value || '').trim();
+            if (value.indexOf("'") !== -1) throw new Error('配置值不能包含单引号');
+            return `'${value}'`;
+        }
+
+        async function postUci(action, cmds) {
+            const res = await fetch(`/cgi-bin/cpe_api.sh?action=${action}`, {
+                method: 'POST',
+                body: cmds.join('\n')
+            });
+            const json = await res.json();
+            if (json && json.msg === 'unauthorized') {
+                handleSessionExpired();
+                return false;
+            }
+            return json && json.status === 'ok';
+        }
+
+        function parseUciShow(text) {
+            const lines = text.split('\n');
+            const config = {};
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line || line.startsWith('#')) return;
+                const eqIdx = line.indexOf('=');
+                if (eqIdx === -1) return;
+                const key = line.substring(0, eqIdx);
+                let val = line.substring(eqIdx + 1);
+                if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) {
+                    val = val.substring(1, val.length - 1);
+                }
+                
+                const parts = key.split('.');
+                if (parts.length < 2) return;
+                const section = parts[1];
+                
+                if (!config[section]) {
+                    config[section] = { _name: section, props: {} };
+                }
+                
+                if (parts.length === 2) {
+                    config[section]._type = val;
+                } else {
+                    const propName = parts.slice(2).join('.');
+                    let propVal = val;
+                    if ((propVal.startsWith("'") && propVal.endsWith("'")) || (propVal.startsWith('"') && propVal.endsWith('"'))) {
+                        propVal = propVal.substring(1, propVal.length - 1);
+                    }
+                    if (config[section].props[propName]) {
+                        config[section].props[propName] += ' ' + propVal;
+                    } else {
+                        config[section].props[propName] = propVal;
+                    }
+                }
+            });
+            return config;
+        }
+
+        function parseList(valStr) {
+            if (!valStr) return [];
+            const regex = /'([^']*)'|"([^"]*)"|(\S+)/g;
+            const list = [];
+            let match;
+            while ((match = regex.exec(valStr)) !== null) {
+                list.push(match[1] || match[2] || match[3]);
+            }
+            return list;
+        }
+
+        function getDefaultChannel(name) {
+            if (name === 'radio0') return '11';
+            if (name === 'radio1') return '149';
+            return 'auto';
+        }
+
+        function getDefaultHtmode(name) {
+            if (name === 'radio0') return 'HE20';
+            if (name === 'radio1') return 'VHT40';
+            return 'HT20';
+        }
+
+        function buildOptions(values, selected) {
+            return values.map(v => `<option value="${v}" ${selected === String(v) ? 'selected' : ''}>${v}</option>`).join('');
+        }
+
+        function buildChannelOptions(name, selected) {
+            if (name === 'radio0') {
+                return buildOptions(Array.from({length: 11}, (_, i) => String(i + 1)), selected);
+            }
+            if (name === 'radio1') {
+                const values = [];
+                for (let i = 36; i <= 60; i += 4) values.push(String(i));
+                for (let i = 100; i <= 144; i += 4) values.push(String(i));
+                for (let i = 149; i <= 165; i += 4) values.push(String(i));
+                return buildOptions(values, selected);
+            }
+            return `<option value="auto" ${selected === 'auto' ? 'selected' : ''}>Auto</option>`;
+        }
+
+        function buildHtmodeOptions(name, selected) {
+            if (name === 'radio0') return buildOptions(['HE20', 'HE40'], selected);
+            if (name === 'radio1') return buildOptions(['VHT20', 'VHT40', 'VHT80', 'VHT160'], selected);
+            return buildOptions(['HT20', 'HT40', 'VHT80', 'HE80'], selected);
+        }
+
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.classList.toggle('is-visible', show);
+        }
+
+        function renderRadios() {
+            const container = document.getElementById('radios-container');
+            container.innerHTML = '';
+            let hasRadio = false;
+
+            for (let name in wifiConfig) {
+                const sect = wifiConfig[name];
+                if (sect._type !== 'wifi-device') continue;
+                hasRadio = true;
+
+                const channel = sect.props.channel || getDefaultChannel(name);
+                const htmode = sect.props.htmode || getDefaultHtmode(name);
+                const country = sect.props.country || 'CN';
+                const disabled = sect.props.disabled === '1';
+                const channelOptions = buildChannelOptions(name, channel);
+                const htmodeOptions = buildHtmodeOptions(name, htmode);
+                const radioLabel = name === 'radio0' ? '2.4G WIFI' : (name === 'radio1' ? '5.8G WIFI' : '无线射频卡');
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h2>${name} (${radioLabel})</h2>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>信道 (Channel)</label>
+                            <select id="chan-${name}">
+                                ${channelOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>频宽 (HT Mode)</label>
+                            <select id="htmode-${name}">
+                                ${htmodeOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>国家码</label>
+                            <input type="text" id="country-${name}" value="${country}">
+                        </div>
+                        <div class="form-group" style="justify-content: center; flex-direction: row; gap: 10px; align-items: center; margin-top: 15px;">
+                            <input type="checkbox" id="disable-${name}" ${disabled ? 'checked' : ''} style="width: auto;">
+                            <label for="disable-${name}" style="color: var(--text-main); font-weight: bold; cursor: pointer;">禁用该无线硬件设备</label>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-save" onclick="saveRadio('${name}')">保存设备配置</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+            if (!hasRadio) {
+                container.innerHTML = `<div class="card">未读取到无线物理设备。请确认 /cgi-bin/cpe_api.sh?action=get_wifi 能返回 uci show wireless 内容。</div>`;
+            }
+        }
+
+        function renderSSIDs() {
+            const container = document.getElementById('networks-container');
+            container.innerHTML = '';
+
+            let hasSSID = false;
+            for (let name in wifiConfig) {
+                const sect = wifiConfig[name];
+                if (sect._type !== 'wifi-iface') continue;
+                hasSSID = true;
+
+                const device = sect.props.device || '';
+                const network = sect.props.network || 'lan';
+                const ssid = sect.props.ssid || '';
+                const encryption = sect.props.encryption || 'none';
+                const key = sect.props.key || '';
+                const macfilter = sect.props.macfilter || 'disabled';
+                const maclist = parseList(sect.props.maclist).join('\n');
+                const disabled = sect.props.disabled === '1';
+                const deleteButton = isAdmin ? `<button class="btn-del" onclick="deleteSSID('${name}')">删除网络</button>` : '';
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = `ssid-card-${name}`;
+                
+                let radioOptions = '';
+                for (let r in wifiConfig) {
+                    if (wifiConfig[r]._type === 'wifi-device') {
+                        radioOptions += `<option value="${r}" ${device === r ? 'selected' : ''}>${r}</option>`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h2>SSID: ${ssid || '(未命名)'}</h2>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>SSID 名称 (WiFi名称)</label>
+                            <input type="text" id="ssid-${name}" value="${ssid}" placeholder="输入SSID">
+                        </div>
+                        <div class="form-group">
+                            <label>绑定无线物理设备 (Radio)</label>
+                            <select id="dev-${name}">
+                                ${radioOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>绑定网络接口</label>
+                            <input type="text" id="net-${name}" value="${network}" placeholder="lan">
+                        </div>
+                        <div class="form-group" style="justify-content: center; flex-direction: row; gap: 10px; align-items: center; margin-top: 15px;">
+                            <input type="checkbox" id="ssid-disable-${name}" ${disabled ? 'checked' : ''} style="width: auto;">
+                            <label for="ssid-disable-${name}" style="color: var(--text-main); font-weight: bold; cursor: pointer;">禁用该 SSID</label>
+                        </div>
+                        <div class="form-group">
+                            <label>加密方式</label>
+                            <select id="enc-${name}" onchange="toggleKeyField('${name}')">
+                                <option value="none" ${encryption === 'none' ? 'selected' : ''}>none (无密码)</option>
+                                <option value="psk2" ${encryption === 'psk2' ? 'selected' : ''}>WPA2-PSK</option>
+                                <option value="psk-mixed" ${encryption === 'psk-mixed' ? 'selected' : ''}>WPA/WPA2-PSK 混合</option>
+                                <option value="sae" ${encryption === 'sae' ? 'selected' : ''}>WPA3-SAE</option>
+                                <option value="sae-mixed" ${encryption === 'sae-mixed' ? 'selected' : ''}>WPA2/WPA3-SAE 混合</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="key-group-${name}" style="display: ${encryption === 'none' ? 'none' : 'block'};">
+                            <label>WiFi 密码</label>
+                            <div class="password-row">
+                                <input type="password" id="key-${name}" value="${key}" placeholder="WiFi密码">
+                                <button type="button" class="password-toggle" onclick="togglePassword('key-${name}', this)" title="显示/隐藏密码"><span class="eye-icon"></span></button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>MAC 过滤模式</label>
+                            <select id="macfilter-${name}">
+                                <option value="disabled" ${macfilter === 'disabled' ? 'selected' : ''}>禁用</option>
+                                <option value="allow" ${macfilter === 'allow' ? 'selected' : ''}>仅允许 (白名单)</option>
+                                <option value="deny" ${macfilter === 'deny' ? 'selected' : ''}>仅拒绝 (黑名单)</option>
+                            </select>
+                        </div>
+                        <div class="form-group-full">
+                            <label>MAC 地址过滤列表 (每行一个)</label>
+                            <textarea id="maclist-${name}" placeholder="AA:BB:CC:DD:EE:FF&#10;11:22:33:44:55:66">${maclist}</textarea>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        ${deleteButton}
+                        <button class="btn-save" onclick="saveSSID('${name}')">保存 & 应用</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+            
+            if (!hasSSID) {
+                container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 40px;">暂无无线网络，请点击右上角新增。</div>`;
+            }
+        }
+
+        function toggleKeyField(name) {
+            const enc = document.getElementById(`enc-${name}`).value;
+            const group = document.getElementById(`key-group-${name}`);
+            group.style.display = enc === 'none' ? 'none' : 'block';
+        }
+
+        function toggleAddKeyField() {
+            const enc = document.getElementById('add_encryption').value;
+            const group = document.getElementById('add_key_group');
+            group.style.display = enc === 'none' ? 'none' : 'block';
+        }
+
+        function toggleAddNetworkCustom() {
+            const sel = document.getElementById('add_network');
+            const input = document.getElementById('add_network_custom');
+            input.style.display = sel.value === 'custom' ? 'block' : 'none';
+        }
+
+        function getNetworkNames() {
+            const names = [];
+            for (let name in networkConfig) {
+                if (networkConfig[name]._type === 'interface' && name !== 'loopback') names.push(name);
+            }
+            return names.length ? names : ['lan', 'wan'];
+        }
+
+        function getNextInterfaceIp() {
+            let maxSubnet = 150;
+            for (let name in networkConfig) {
+                const ip = (networkConfig[name].props && networkConfig[name].props.ipaddr) || '';
+                const match = ip.match(/^192\.168\.(\d{1,3})\.1$/);
+                if (match) maxSubnet = Math.max(maxSubnet, parseInt(match[1], 10));
+            }
+            const nextSubnet = Math.min(maxSubnet + 1, 254);
+            return `192.168.${nextSubnet}.1`;
+        }
+
+        function predictWifiDevice(radio) {
+            const radioIndex = radio.replace(/^radio/, '');
+            let apIndex = 0;
+            for (let name in wifiConfig) {
+                const sect = wifiConfig[name];
+                if (sect._type === 'wifi-iface' && sect.props.device === radio && (sect.props.mode || 'ap') === 'ap') apIndex++;
+            }
+            return `phy${radioIndex}-ap${apIndex}`;
+        }
+
+        function getNextWifiId() {
+            let maxId = 0;
+            for (let name in wifiConfig) {
+                if (wifiConfig[name]._type !== 'wifi-iface') continue;
+                const match = name.match(/^wifi(\d+)$/);
+                if (match) maxId = Math.max(maxId, parseInt(match[1], 10));
+            }
+            return `wifi${maxId + 1}`;
+        }
+
+        function openAddModal() {
+            document.getElementById('add_ssid').value = '';
+            document.getElementById('add_encryption').value = 'psk2';
+            document.getElementById('add_key').value = '';
+            document.getElementById('add_macfilter').value = 'disabled';
+            document.getElementById('add_maclist').value = '';
+            
+            const sel = document.getElementById('add_device');
+            sel.innerHTML = '';
+            for (let r in wifiConfig) {
+                if (wifiConfig[r]._type === 'wifi-device') {
+                    sel.innerHTML += `<option value="${r}">${r}</option>`;
+                }
+            }
+
+            const networkSel = document.getElementById('add_network');
+            networkSel.innerHTML = '';
+            getNetworkNames().forEach(name => {
+                networkSel.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+            networkSel.innerHTML += `<option value="custom">自定义接口</option>`;
+            document.getElementById('add_network_custom').value = '';
+            toggleAddNetworkCustom();
+            
+            toggleAddKeyField();
+            document.getElementById('addModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+
+        async function submitAdd() {
+            const ssid = document.getElementById('add_ssid').value.trim();
+            const device = document.getElementById('add_device').value;
+            let network = document.getElementById('add_network').value;
+            const encryption = document.getElementById('add_encryption').value;
+            const key = document.getElementById('add_key').value.trim();
+            const macfilter = document.getElementById('add_macfilter').value;
+            const maclistText = document.getElementById('add_maclist').value;
+            
+            if (!ssid) return alert('请输入 SSID');
+            if (encryption !== 'none' && key.length < 8) return alert('密码长度至少8位');
+            const createNetwork = network === 'custom';
+            if (createNetwork) {
+                network = document.getElementById('add_network_custom').value.trim();
+                if (!/^[A-Za-z0-9_]{1,24}$/.test(network)) return alert('自定义接口名称仅支持字母、数字和下划线');
+                if (networkConfig[network]) return alert('该逻辑接口已存在');
+            }
+
+            const newId = getNextWifiId();
+            
+            let cmds = [];
+            cmds.push(`uci set wireless.${newId}=wifi-iface`);
+            cmds.push(`uci set wireless.${newId}.device=${uciQuote(device)}`);
+            cmds.push(`uci set wireless.${newId}.network=${uciQuote(network)}`);
+            cmds.push(`uci set wireless.${newId}.mode='ap'`);
+            cmds.push(`uci set wireless.${newId}.ssid=${uciQuote(ssid)}`);
+            cmds.push(`uci set wireless.${newId}.encryption=${uciQuote(encryption)}`);
+            cmds.push(`uci set wireless.${newId}.disabled='0'`);
+            
+            if (encryption !== 'none') {
+                cmds.push(`uci set wireless.${newId}.key=${uciQuote(key)}`);
+            }
+            
+            if (macfilter !== 'disabled') {
+                cmds.push(`uci set wireless.${newId}.macfilter=${uciQuote(macfilter)}`);
+                const macs = maclistText.split('\n').map(x => x.trim()).filter(Boolean);
+                macs.forEach(m => {
+                    cmds.push(`uci add_list wireless.${newId}.maclist=${uciQuote(m)}`);
+                });
+            }
+            
+            cmds.push(`uci commit wireless`);
+
+            const networkCmds = [];
+            const dhcpCmds = [];
+            if (createNetwork) {
+                const predictedDevice = predictWifiDevice(device);
+                const interfaceIp = getNextInterfaceIp();
+                networkCmds.push(`uci set network.${network}=interface`);
+                networkCmds.push(`uci set network.${network}.proto='static'`);
+                networkCmds.push(`uci set network.${network}.device=${uciQuote(predictedDevice)}`);
+                networkCmds.push(`uci set network.${network}.ipaddr=${uciQuote(interfaceIp)}`);
+                networkCmds.push(`uci set network.${network}.netmask='255.255.255.0'`);
+                networkCmds.push(`uci commit network`);
+                dhcpCmds.push(`uci set dhcp.${network}=dhcp`);
+                dhcpCmds.push(`uci set dhcp.${network}.interface=${uciQuote(network)}`);
+                dhcpCmds.push(`uci set dhcp.${network}.start='100'`);
+                dhcpCmds.push(`uci set dhcp.${network}.limit='150'`);
+                dhcpCmds.push(`uci set dhcp.${network}.leasetime='12h'`);
+                dhcpCmds.push(`uci delete dhcp.${network}.ignore`);
+                dhcpCmds.push(`uci delete dhcp.${network}.dhcp_option`);
+                dhcpCmds.push(`uci add_list dhcp.${network}.dhcp_option=${uciQuote(`6,${interfaceIp}`)}`);
+                dhcpCmds.push(`uci commit dhcp`);
+            }
+
+            closeModal();
+            setBusy(true, '请稍后');
+            try {
+                const okWifi = await postUci('set_wifi', cmds);
+                const okNetwork = createNetwork ? await postUci('set_network', networkCmds) : true;
+                const okDhcp = createNetwork ? await postUci('set_dhcp', dhcpCmds) : true;
+                if (okWifi && okNetwork && okDhcp) {
+                    showToast();
+                    await init();
+                } else {
+                    alert('新增失败');
+                }
+            } catch (e) {
+                alert(e.message || '新增异常');
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        async function saveRadio(name) {
+            const channel = document.getElementById(`chan-${name}`).value;
+            const htmode = document.getElementById(`htmode-${name}`).value;
+            const country = document.getElementById(`country-${name}`).value.trim();
+            const disabled = document.getElementById(`disable-${name}`).checked ? '1' : '0';
+
+            let cmds = [];
+            cmds.push(`uci set wireless.${name}.channel=${uciQuote(channel)}`);
+            cmds.push(`uci set wireless.${name}.htmode=${uciQuote(htmode)}`);
+            cmds.push(`uci set wireless.${name}.country=${uciQuote(country)}`);
+            cmds.push(`uci set wireless.${name}.disabled=${uciQuote(disabled)}`);
+            cmds.push(`uci commit wireless`);
+
+            setBusy(true, '请稍后');
+            try {
+                if (await postUci('set_wifi', cmds)) {
+                    showToast();
+                    await init();
+                } else {
+                    alert('保存失败');
+                }
+            } catch (e) {
+                alert(e.message || '保存异常');
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        async function deleteSSID(name) {
+            if (!(await confirmAction('确定删除该无线SSID接口吗？'))) return;
+
+            let cmds = [];
+            cmds.push(`uci delete wireless.${name}`);
+            cmds.push(`uci commit wireless`);
+
+            setBusy(true, '请稍后');
+            try {
+                if (await postUci('set_wifi', cmds)) {
+                    showToast();
+                    await init();
+                } else {
+                    alert('删除失败');
+                }
+            } catch (e) {
+                alert(e.message || '删除异常');
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        async function saveSSID(name) {
+            const ssid = document.getElementById(`ssid-${name}`).value.trim();
+            const device = document.getElementById(`dev-${name}`).value;
+            const network = document.getElementById(`net-${name}`).value.trim();
+            const encryption = document.getElementById(`enc-${name}`).value;
+            const key = document.getElementById(`key-${name}`) ? document.getElementById(`key-${name}`).value.trim() : '';
+            const macfilter = document.getElementById(`macfilter-${name}`).value;
+            const maclistText = document.getElementById(`maclist-${name}`).value;
+            const disabled = document.getElementById(`ssid-disable-${name}`).checked ? '1' : '0';
+
+            if (!ssid) return alert('SSID 不能为空');
+            if (encryption !== 'none' && key.length < 8) return alert('密码长度至少8位');
+
+            let cmds = [];
+            cmds.push(`uci set wireless.${name}=wifi-iface`);
+            cmds.push(`uci set wireless.${name}.ssid=${uciQuote(ssid)}`);
+            cmds.push(`uci set wireless.${name}.device=${uciQuote(device)}`);
+            cmds.push(`uci set wireless.${name}.network=${uciQuote(network)}`);
+            cmds.push(`uci set wireless.${name}.encryption=${uciQuote(encryption)}`);
+            cmds.push(`uci set wireless.${name}.disabled=${uciQuote(disabled)}`);
+            
+            if (encryption !== 'none') {
+                cmds.push(`uci set wireless.${name}.key=${uciQuote(key)}`);
+            } else {
+                cmds.push(`uci delete wireless.${name}.key`);
+            }
+
+            if (macfilter !== 'disabled') {
+                cmds.push(`uci set wireless.${name}.macfilter=${uciQuote(macfilter)}`);
+                cmds.push(`uci delete wireless.${name}.maclist`);
+                const macs = maclistText.split('\n').map(x => x.trim()).filter(Boolean);
+                macs.forEach(m => {
+                    cmds.push(`uci add_list wireless.${name}.maclist=${uciQuote(m)}`);
+                });
+            } else {
+                cmds.push(`uci delete wireless.${name}.macfilter`);
+                cmds.push(`uci delete wireless.${name}.maclist`);
+            }
+            cmds.push(`uci commit wireless`);
+
+            setBusy(true, '请稍后');
+            try {
+                if (await postUci('set_wifi', cmds)) {
+                    showToast();
+                    await init();
+                } else {
+                    alert('保存失败');
+                }
+            } catch (e) {
+                alert(e.message || '保存异常');
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        function setBusy(active, text) {
+            const lock = document.getElementById('pageLock');
+            if (!lock) return;
+            if (text) lock.querySelector('.page-lock-box').textContent = text;
+            lock.classList.toggle('active', !!active);
+        }
+
+        function confirmAction(text) {
+            document.getElementById('confirmText').textContent = text || '确定执行该操作吗？';
+            document.getElementById('confirmLayer').classList.add('active');
+            return new Promise(resolve => { confirmResolver = resolve; });
+        }
+
+        function resolveConfirm(ok) {
+            document.getElementById('confirmLayer').classList.remove('active');
+            if (confirmResolver) confirmResolver(!!ok);
+            confirmResolver = null;
+        }
+
+        function showToast() {
+            const t = document.getElementById('toast');
+            t.classList.add('show');
+            clearTimeout(showToast.timer);
+            showToast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        init();
+    </script>
+</body>
+</html>

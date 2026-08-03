@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/cpe/assets/favicon.png">
+    <title>流量转发配置</title>
+    <style>
+        :root { --bg-main: #f3f6fb; --bg-card: #ffffff; --border-color: #dfe7f3; --text-main: #071b3a; --text-muted: #64748b; --theme-blue: #3568b7; --theme-green: #18a178; --theme-red: #d94a38; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg-main); color: var(--text-main); padding: 30px; margin: 0; }
+        h1 { font-size: 1.8rem; margin: 0 0 25px 0; color: var(--text-main); }
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 12px 30px rgba(29, 53, 87, .08); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        h2 { margin: 0; color: var(--theme-blue); font-size: 1.2rem; }
+        .btn-add { background: var(--theme-blue); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        th { color: var(--text-muted); font-weight: 500; }
+        input, select, textarea { background: #ffffff; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 10px; border-radius: 4px; width: 100%; box-sizing: border-box; font-family: monospace; }
+        .input-group { display: flex; gap: 5px; align-items: center; }
+        .input-group input:first-child { flex: 2; }
+        .input-group input:last-child { flex: 1; }
+        .btn-del { background: var(--theme-red); color: #fff; border: none; padding: 7px 14px; border-radius: 4px; cursor: pointer; }
+        .btn-card-save { background: var(--theme-blue); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background:#fff; color:#13BB8A; padding:12px 20px; border:1px solid #b9eadb; border-radius:8px; box-shadow:0 14px 34px rgba(15,65,55,.18); opacity:0; pointer-events:none; font-weight:bold; z-index:1000; transition:opacity .3s ease; }
+        .toast.show { opacity: 1; }
+        .ipt-row { display:flex; gap:10px; margin-bottom:10px; }
+        .ipt-group { border: 1px dashed #b9c8df; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f8fbff; }
+        .ipt-group input { margin-bottom: 5px; color:var(--theme-blue); }
+        .source-custom { display:none; max-width: 220px; }
+        .source-custom.show { display:block; }
+        .ipt-source-list { min-height: 54px; resize: vertical; color:var(--theme-blue); margin-bottom: 10px; }
+        .ipt-add-source { background: #eaf1fb; color: var(--theme-blue); border: 1px solid var(--border-color); padding: 7px 12px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+        .page-lock { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(3, 7, 18, .64); z-index: 999; }
+        .page-lock.active { display: flex; }
+        .page-lock-box { min-width: 140px; padding: 18px 24px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 18px 42px rgba(0,0,0,.35); }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast">配置已保存并应用</div>
+    <div id="pageLock" class="page-lock"><div class="page-lock-box">请稍后</div></div>
+    <h1>流量转发配置</h1>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>SOCKS5节点</h2>
+            <button class="btn-add" onclick="addRedsocks()">+ 新增节点</button>
+        </div>
+        <table>
+            <thead><tr><th width="5%">序号</th><th width="15%">名称</th><th width="20%">本地绑定 (IP:端口)</th><th width="20%">远端中转 (IP:端口)</th><th width="15%">账号</th><th width="15%">密码</th><th width="10%">操作</th></tr></thead>
+            <tbody id="tb-redsocks"></tbody>
+        </table>
+        <div style="text-align: right; margin-top: 20px;">
+            <button class="btn-card-save" onclick="saveRedsocksAndDns('SOCKS5 节点配置已保存并应用')">保存 & 应用</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>DNS转发</h2>
+            <button class="btn-add" onclick="addTcpdns()">+ 新增</button>
+        </div>
+        <table>
+            <thead><tr><th width="5%">序号</th><th width="20%">名称</th><th width="25%">本地绑定 (IP:端口)</th><th width="25%">上游DNS (IP:端口)</th><th width="15%"></th><th width="10%">操作</th></tr></thead>
+            <tbody id="tb-tcpdns"></tbody>
+        </table>
+        <div style="text-align: right; margin-top: 20px;">
+            <button class="btn-card-save" onclick="saveRedsocksAndDns('DNS 转发配置已保存并应用')">保存 & 应用</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>iptables业务转发</h2>
+            <button class="btn-add" onclick="addIptablesGroup()">+ 新增业务转发</button>
+        </div>
+        <div id="iptables-container"></div>
+        <div style="text-align: right; margin-top: 20px;">
+            <button class="btn-card-save" onclick="saveIptablesConfig()">保存 & 应用</button>
+        </div>
+    </div>
+
+    <script>
+        const rawFetch = window.fetch.bind(window);
+        window.fetch = (url, opts = {}) => {
+            const token = localStorage.getItem("cpe_token");
+            opts.headers = Object.assign({}, opts.headers || {}, token ? {"X-CPE-Token": token} : {});
+            if (token && typeof url === 'string' && url.indexOf('/cgi-bin/') === 0 && url.indexOf('_cpe_token=') === -1) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + '_cpe_token=' + encodeURIComponent(token);
+            }
+            return rawFetch(url, opts);
+        };
+        if(localStorage.getItem("cpe_role") !== "admin") document.body.innerHTML = "<h2>无权限访问</h2>";
+
+        let parsedBlocks = [];
+        let iptablesGroups = [];
+        let interfacesMap = {};
+
+        async function init() {
+            try {
+                const [resConfig, resIpt, resIfaces] = await Promise.all([
+                    fetch('/cgi-bin/cpe_redsocks.sh'),
+                    fetch('/cgi-bin/cpe_api.sh?action=get_iptables'),
+                    fetch('/cgi-bin/cpe_api.sh?action=get_interfaces')
+                ]);
+                const text = await resConfig.text();
+                if (text.trim().startsWith('{') && text.indexOf('unauthorized') !== -1) throw new Error('unauthorized');
+                const iptText = await resIpt.text();
+                const ifText = await resIfaces.text();
+                iptablesGroups = iptText.trim() ? JSON.parse(iptText) : [];
+                interfacesMap = ifText.trim() ? JSON.parse(ifText) : {};
+                if (!Array.isArray(iptablesGroups)) iptablesGroups = [];
+                parseConfig(text);
+                renderTables();
+            } catch (e) { alert("加载异常，请重新登录后再进入流量转发页面"); }
+        }
+
+        function getSubnet(ipCidr) {
+            if(!ipCidr || ipCidr.indexOf('/') === -1) return ipCidr;
+            let parts = ipCidr.split('/');
+            let octets = parts[0].split('.').map(Number);
+            let mask = -1 << (32 - parseInt(parts[1]));
+            let net = ((octets[0]<<24) | (octets[1]<<16) | (octets[2]<<8) | octets[3]) & mask;
+            return [(net>>>24)&255, (net>>>16)&255, (net>>>8)&255, net&255].join('.') + '/' + parts[1];
+        }
+
+        function parseConfig(text) {
+            parsedBlocks = [];
+            const blockRegex = /([a-zA-Z0-9_-]+)\s*\{([^}]*)\}/g;
+            let match;
+            while ((match = blockRegex.exec(text)) !== null) {
+                let type = match[1]; let content = match[2];
+                if (type === 'redsocks' || type === 'tcpdns') {
+                    let props = {};
+                    let name = "";
+                    let nameMatch = content.match(/\/\*\s*cpe_name:\s*(.+?)\s*\*\//);
+                    if(nameMatch) name = nameMatch[1];
+                    const lineRegex = /^\s*([a-zA-Z0-9_-]+)\s*=\s*(.*?)\s*;/gm;
+                    let lineMatch;
+                    while ((lineMatch = lineRegex.exec(content)) !== null) {
+                        let k = lineMatch[1]; let v = lineMatch[2];
+                        if (v.startsWith('"') && v.endsWith('"')) v = v.substring(1, v.length - 1);
+                        props[k] = v;
+                    }
+                    parsedBlocks.push({ type, props, name, id: Math.random().toString(36).substr(2, 9) });
+                } else { parsedBlocks.push({ type, raw: content, id: Math.random().toString(36).substr(2, 9) }); }
+            }
+        }
+
+        function getMaxPort(type, def) {
+            let max = 0;
+            parsedBlocks.forEach(b => {
+                if(b.type===type && b.props && b.props.bind) {
+                    let p = parseInt(b.props.bind.split(':')[1]);
+                    if(!isNaN(p) && p > max) max = p;
+                }
+            });
+            return max > 0 ? max + 1 : def;
+        }
+
+        function addRedsocks() { parsedBlocks.push({ type:'redsocks', id:Math.random().toString(36).substr(2,9), name:'', props: { bind:`0.0.0.0:${getMaxPort('redsocks',30001)}`, relay:":", type:"socks5", login:"", password:"", autoproxy:"0" } }); renderTables(); }
+        function addTcpdns() { parsedBlocks.push({ type:'tcpdns', id:Math.random().toString(36).substr(2,9), name:'', props: { bind:`0.0.0.0:${getMaxPort('tcpdns',53001)}`, tcpdns1:":53", timeout:"4" } }); renderTables(); }
+        function deleteBlock(id) { parsedBlocks = parsedBlocks.filter(b => b.id !== id); renderTables(); }
+        
+        function addIptablesGroup() {
+            iptablesGroups.push({ id: Math.random().toString(36).substr(2,9), sourceIps: [], sourceIp: '', sourceMode: '', iface: '', socksName: '', dnsName: '', rule1: '', rule2: '', rule3: '', rule4: '' });
+            renderTables();
+        }
+        function delIptablesGroup(id) {
+            syncStateFromDom();
+            iptablesGroups = iptablesGroups.filter(g => g.id !== id);
+            renderTables();
+        }
+
+        function renderTables() {
+            syncStateFromDom();
+            let rsHtml = ''; let tdHtml = ''; let rsIdx = 1; let tdIdx = 1;
+            
+            parsedBlocks.forEach(b => {
+                if(b.type === 'redsocks') {
+                    let bp = (b.props.bind || ":").split(':'); let rp = (b.props.relay || ":").split(':');
+                    rsHtml += `<tr>
+                        <td>${rsIdx++}</td>
+                        <td><input type="text" id="rs_n_${b.id}" value="${b.name}" placeholder="nodeA" oninput="this.value=this.value.replace(/[^a-zA-Z0-9!@#&()_\\-]/g,'')"></td>
+                        <td><div class="input-group"><input type="text" id="rs_bip_${b.id}" value="${bp[0]}"><span>:</span><input type="text" id="rs_bport_${b.id}" value="${bp[1]||''}"></div></td>
+                        <td><div class="input-group"><input type="text" id="rs_rip_${b.id}" value="${rp[0]}"><span>:</span><input type="text" id="rs_rport_${b.id}" value="${rp[1]||''}"></div></td>
+                        <td><input type="text" id="rs_l_${b.id}" value="${b.props.login||''}"></td>
+                        <td><input type="text" id="rs_p_${b.id}" value="${b.props.password||''}"></td>
+                        <td><button class="btn-del" onclick="deleteBlock('${b.id}')">删除</button></td>
+                    </tr>`;
+                } else if(b.type === 'tcpdns') {
+                    let bp = (b.props.bind || ":").split(':'); let dp = (b.props.tcpdns1 || ":").split(':');
+                    tdHtml += `<tr>
+                        <td>${tdIdx++}</td>
+                        <td><input type="text" id="td_n_${b.id}" value="${b.name}" placeholder="dnsA" oninput="this.value=this.value.replace(/[^a-zA-Z0-9!@#&()_\\-]/g,'')"></td>
+                        <td><div class="input-group"><input type="text" id="td_bip_${b.id}" value="${bp[0]}"><span>:</span><input type="text" id="td_bport_${b.id}" value="${bp[1]||''}"></div></td>
+                        <td><div class="input-group"><input type="text" id="td_dip_${b.id}" value="${dp[0]}"><span>:</span><input type="text" id="td_dport_${b.id}" value="${dp[1]||'53'}"></div></td>
+                        <td></td>
+                        <td><button class="btn-del" onclick="deleteBlock('${b.id}')">删除</button></td>
+                    </tr>`;
+                }
+            });
+            document.getElementById('tb-redsocks').innerHTML = rsHtml; document.getElementById('tb-tcpdns').innerHTML = tdHtml;
+
+            let iptHtml = "";
+            iptablesGroups.forEach(g => {
+                if (!Array.isArray(g.sourceIps)) {
+                    g.sourceIps = [];
+                    if (g.sourceIp) g.sourceIps.push(g.sourceIp);
+                    else if (g.iface) g.sourceIps.push(g.iface);
+                }
+                let sourceOptions = '<option value="">-- 选择源IP --</option>';
+                for(let ifn in interfacesMap) {
+                    if (!interfacesMap[ifn]) continue;
+                    let ipCidr = interfacesMap[ifn];
+                    sourceOptions += `<option value="${ipCidr}" ${g.sourceIp===ipCidr?'selected':''}>${ifn} (${ipCidr})</option>`;
+                }
+                sourceOptions += `<option value="custom" ${g.sourceMode==='custom'?'selected':''}>自定义IP</option>`;
+                const sourceList = g.sourceIps.join('\n');
+                let socksOptions = '<option value="">-- 选择SOCKS5节点 --</option>';
+                parsedBlocks.filter(b=>b.type==='redsocks' && b.name).forEach(b => {
+                    socksOptions += `<option value="${b.name}" ${g.socksName===b.name?'selected':''}>${b.name}</option>`;
+                });
+                let dnsOptions = '<option value="">-- 选择DNS节点 --</option>';
+                parsedBlocks.filter(b=>b.type==='tcpdns' && b.name).forEach(b => {
+                    dnsOptions += `<option value="${b.name}" ${g.dnsName===b.name?'selected':''}>${b.name}</option>`;
+                });
+                iptHtml += `<div class="ipt-group">
+                    <div class="ipt-row">
+                        <select id="ipt_source_${g.id}" onchange="toggleSourceCustom('${g.id}')">${sourceOptions}</select>
+                        <input class="source-custom ${g.sourceMode==='custom'?'show':''}" type="text" id="ipt_source_custom_${g.id}" value="" placeholder="例如 192.168.151.0/24">
+                        <button class="ipt-add-source" onclick="addSourceIp('${g.id}')">添加源IP</button>
+                        <select id="ipt_socks_${g.id}" onchange="updateIpt('${g.id}')">${socksOptions}</select>
+                        <select id="ipt_dns_${g.id}" onchange="updateIpt('${g.id}')">${dnsOptions}</select>
+                        <button class="btn-del" onclick="delIptablesGroup('${g.id}')">删除业务组</button>
+                    </div>
+                    <textarea class="ipt-source-list" id="ipt_sources_${g.id}" placeholder="源IP列表，每行一个，例如 192.168.151.0/24" oninput="updateIpt('${g.id}')">${sourceList}</textarea>
+                    <textarea id="ipt_r1_${g.id}" placeholder="Rule 1">${g.rule1}</textarea>
+                    <textarea id="ipt_r2_${g.id}" placeholder="Rule 2">${g.rule2}</textarea>
+                    <textarea id="ipt_r3_${g.id}" placeholder="Rule 3">${g.rule3}</textarea>
+                    <textarea id="ipt_r4_${g.id}" placeholder="Rule 4">${g.rule4}</textarea>
+                </div>`;
+            });
+            document.getElementById('iptables-container').innerHTML = iptHtml;
+        }
+
+        function getGroupSources(g) {
+            if (Array.isArray(g.sourceIps) && g.sourceIps.length) return g.sourceIps;
+            if (g.sourceIp) return [g.sourceIp];
+            if (g.iface) return [g.iface];
+            return ["0.0.0.0/0"];
+        }
+
+        function updateIpt(id) {
+            syncStateFromDom();
+            let g = iptablesGroups.find(x => x.id === id);
+            let sNode = parsedBlocks.find(b => b.type==='redsocks' && b.name === g.socksName);
+            let dNode = parsedBlocks.find(b => b.type==='tcpdns' && b.name === g.dnsName);
+            
+            let sources = getGroupSources(g);
+            let sPort = sNode && sNode.props.bind ? sNode.props.bind.split(':')[1] : "30001";
+            let dPort = dNode && dNode.props.bind ? dNode.props.bind.split(':')[1] : "53001";
+            let dUpIp = dNode && dNode.props.tcpdns1 ? dNode.props.tcpdns1.split(':')[0] : "8.8.4.4";
+
+            document.getElementById(`ipt_r1_${id}`).value = sources.map(sIp => `iptables -t nat -A PREROUTING -s ${sIp} -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports ${sPort}`).join('\n');
+            document.getElementById(`ipt_r2_${id}`).value = sources.map(sIp => `iptables -t nat -A PREROUTING -s ${sIp} -p udp --dport 53 -j REDIRECT --to-ports ${dPort}`).join('\n');
+            document.getElementById(`ipt_r3_${id}`).value = `iptables -t nat -A OUTPUT -d ${dUpIp} -p tcp --dport 53 -j REDIRECT --to-ports ${sPort}`;
+            document.getElementById(`ipt_r4_${id}`).value = sources.map(sIp => `iptables -t filter -A FORWARD -s ${sIp} -p udp -m set ! --match-set chnroute dst -j REJECT --reject-with icmp-port-unreachable`).join('\n');
+        }
+
+        function addSourceIp(id) {
+            syncStateFromDom();
+            const g = iptablesGroups.find(x => x.id === id);
+            const sel = document.getElementById(`ipt_source_${id}`);
+            const custom = document.getElementById(`ipt_source_custom_${id}`);
+            if (!g || !sel) return;
+            const value = sel.value === 'custom' ? (custom ? custom.value.trim() : '') : sel.value;
+            if (!value) return alert('请选择或输入源IP');
+            if (!Array.isArray(g.sourceIps)) g.sourceIps = [];
+            if (!g.sourceIps.includes(value)) g.sourceIps.push(value);
+            const list = document.getElementById(`ipt_sources_${id}`);
+            if (list) list.value = g.sourceIps.join('\n');
+            if (custom) custom.value = '';
+            updateIpt(id);
+        }
+
+        function toggleSourceCustom(id) {
+            const sel = document.getElementById(`ipt_source_${id}`);
+            const input = document.getElementById(`ipt_source_custom_${id}`);
+            if (!sel || !input) return;
+            input.classList.toggle('show', sel.value === 'custom');
+        }
+
+        function syncStateFromDom() {
+            parsedBlocks.forEach(b => {
+                if(b.type === 'redsocks') {
+                    let n = document.getElementById(`rs_n_${b.id}`); if(n) b.name = n.value.trim();
+                    let bip = document.getElementById(`rs_bip_${b.id}`); if(bip) b.props.bind = bip.value.trim() + ':' + document.getElementById(`rs_bport_${b.id}`).value.trim();
+                    let rip = document.getElementById(`rs_rip_${b.id}`); if(rip) b.props.relay = rip.value.trim() + ':' + document.getElementById(`rs_rport_${b.id}`).value.trim();
+                    let l = document.getElementById(`rs_l_${b.id}`); if(l) b.props.login = l.value;
+                    let p = document.getElementById(`rs_p_${b.id}`); if(p) b.props.password = p.value;
+                } else if(b.type === 'tcpdns') {
+                    let n = document.getElementById(`td_n_${b.id}`); if(n) b.name = n.value.trim();
+                    let bip = document.getElementById(`td_bip_${b.id}`); if(bip) b.props.bind = bip.value.trim() + ':' + document.getElementById(`td_bport_${b.id}`).value.trim();
+                    let dip = document.getElementById(`td_dip_${b.id}`); if(dip) b.props.tcpdns1 = dip.value.trim() + ':' + document.getElementById(`td_dport_${b.id}`).value.trim();
+                }
+            });
+            iptablesGroups.forEach(g => {
+                let source = document.getElementById(`ipt_source_${g.id}`);
+                let sourceList = document.getElementById(`ipt_sources_${g.id}`);
+                if (source) g.sourceMode = source.value === 'custom' ? 'custom' : '';
+                if (sourceList) {
+                    g.sourceIps = sourceList.value.split(/[\n,;\s]+/).map(x => x.trim()).filter(Boolean);
+                    g.sourceIp = g.sourceIps[0] || '';
+                    g.iface = g.sourceIp;
+                }
+                let socks = document.getElementById(`ipt_socks_${g.id}`); if(socks) g.socksName = socks.value;
+                let dns = document.getElementById(`ipt_dns_${g.id}`); if(dns) g.dnsName = dns.value;
+                let r1 = document.getElementById(`ipt_r1_${g.id}`); if(r1) g.rule1 = r1.value;
+                let r2 = document.getElementById(`ipt_r2_${g.id}`); if(r2) g.rule2 = r2.value;
+                let r3 = document.getElementById(`ipt_r3_${g.id}`); if(r3) g.rule3 = r3.value;
+                let r4 = document.getElementById(`ipt_r4_${g.id}`); if(r4) g.rule4 = r4.value;
+            });
+        }
+
+        async function saveRedsocksAndDns(toastMsg) {
+            syncStateFromDom();
+            let rsOut = "";
+            const unq = ['type', 'autoproxy', 'timeout', 'log_debug', 'log_info', 'daemon', 'redirector'];
+            parsedBlocks.forEach(b => {
+                rsOut += b.type + " {\n";
+                if (b.raw !== undefined) { rsOut += b.raw; } 
+                else {
+                    if(b.name) rsOut += `          /* cpe_name: ${b.name} */\n`;
+                    for(let k in b.props) {
+                        if(unq.includes(k)) rsOut += `          ${k} = ${b.props[k]};\n`;
+                        else rsOut += `          ${k} = "${b.props[k]}";\n`;
+                    }
+                }
+                if(!rsOut.endsWith("\n")) rsOut += "\n";
+                rsOut += "}\n";
+            });
+
+            setBusy(true, '请稍后');
+            try {
+                await fetch('/cgi-bin/cpe_redsocks.sh', { method: 'POST', body: rsOut });
+                showToast(toastMsg || "配置已保存并应用");
+            } catch(e) { alert("保存出现异常"); }
+            finally { setBusy(false); }
+        }
+
+        async function saveIptablesConfig() {
+            syncStateFromDom();
+            let shOut = "";
+            iptablesGroups.forEach(g => {
+                shOut += [g.rule1, g.rule2, g.rule3, g.rule4].filter(Boolean).join('\n');
+                if (shOut && !shOut.endsWith('\n')) shOut += '\n';
+            });
+
+            setBusy(true, '请稍后');
+            try {
+                await Promise.all([
+                    fetch('/cgi-bin/cpe_api.sh?action=set_iptables_ui', { method: 'POST', body: JSON.stringify(iptablesGroups) }),
+                    fetch('/cgi-bin/cpe_api.sh?action=set_iptables_sh', { method: 'POST', body: shOut })
+                ]);
+                showToast("iptables 业务转发配置已保存并应用");
+            } catch(e) { alert("保存出现异常"); }
+            finally { setBusy(false); }
+        }
+
+        function setBusy(active, text) {
+            const lock = document.getElementById('pageLock');
+            if (!lock) return;
+            if (text) lock.querySelector('.page-lock-box').textContent = text;
+            lock.classList.toggle('active', !!active);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            clearTimeout(showToast.timer);
+            showToast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        init();
+    </script>
+</body>
+</html>

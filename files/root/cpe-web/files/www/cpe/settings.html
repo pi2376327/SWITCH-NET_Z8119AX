@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/cpe/assets/favicon.png">
+    <title>系统设置</title>
+    <style>
+        :root { --bg-main: #f3f6fb; --bg-card: #ffffff; --border-color: #dfe7f3; --text-main: #071b3a; --text-muted: #64748b; --theme-blue: #3568b7; --theme-red: #d94a38; --theme-green: #18a178; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg-main); color: var(--text-main); padding: 30px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 12px 30px rgba(29, 53, 87, .08); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-muted); font-weight: 500; }
+        button { background: var(--theme-blue); color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .setting-help { color: var(--text-muted); margin: 6px 0 14px; line-height: 1.7; }
+        .upload-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+        .upload-row input[type=file] { width:auto; max-width: 360px; background:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px; }
+        .preview-box { margin-top:14px; width:min(520px,100%); aspect-ratio: 16 / 9; border:1px solid var(--border-color); border-radius:8px; background:#f3f6fb center/cover no-repeat; }
+        
+        /* Modal Styles */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--bg-card); border: 1px solid var(--border-color); padding: 30px; border-radius: 12px; width: 320px; }
+        .modal-content h3 { margin-top: 0; color: var(--theme-blue); margin-bottom: 20px; }
+        .modal-content input, .modal-content select { width: 100%; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-main); padding: 10px; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-cancel { background: #eaf1fb; color: var(--theme-blue); }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background:#fff; color:#13BB8A; padding:12px 20px; border:1px solid #b9eadb; border-radius:8px; box-shadow:0 14px 34px rgba(15,65,55,.18); opacity:0; pointer-events:none; font-weight:bold; z-index:1001; transition:opacity .3s ease; }
+        .toast.show { opacity: 1; }
+        .page-lock, .confirm-layer { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(3, 7, 18, .64); z-index: 1000; }
+        .page-lock.active, .confirm-layer.active { display: flex; }
+        .page-lock-box, .confirm-box { min-width: 160px; max-width: 360px; padding: 20px 24px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; text-align:center; box-shadow: 0 18px 42px rgba(0,0,0,.35); }
+        .confirm-box p { margin: 0 0 18px; }
+        .confirm-actions { display:flex; gap:10px; justify-content:center; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast">操作成功</div>
+    <div id="pageLock" class="page-lock"><div class="page-lock-box">请稍后</div></div>
+    <div id="confirmLayer" class="confirm-layer">
+        <div class="confirm-box">
+            <p id="confirmText">确定执行该操作吗？</p>
+            <div class="confirm-actions">
+                <button class="btn-cancel" onclick="resolveConfirm(false)">取消</button>
+                <button style="background:var(--theme-red);color:#fff;" onclick="resolveConfirm(true)">确定</button>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+            <h2 style="margin:0;">账户管理</h2>
+            <button id="admin-actions-bar" style="background:var(--theme-green); display:none;" onclick="openAddUser()">+ 新增账户</button>
+        </div>
+        <table id="usertable"></table>
+    </div>
+
+    <div class="card" id="login-bg-card" style="display:none;">
+        <h2 style="margin:0 0 8px;">登录页背景图</h2>
+        <p class="setting-help">支持 .jpg 或 .png，文件大小小于等于 5MByte。登录页左侧区域约占桌面宽度 58%、高度 100%，1920x1080 屏幕约为 1114x1080，建议上传 1600x1200 或更高分辨率图片，主体放在画面中间偏左。</p>
+        <div class="upload-row">
+            <input type="file" id="login_bg_file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" onchange="previewLoginBg()">
+            <button onclick="uploadLoginBg()">上传并应用</button>
+        </div>
+        <div id="login_bg_preview" class="preview-box"></div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <h3>新增账户</h3>
+            <input type="text" id="add_username" placeholder="用户名">
+            <input type="password" id="add_password" placeholder="密码">
+            <select id="add_role">
+                <option value="user">二级账号(监控与SSID配置)</option>
+                <option value="admin">管理员(全权限)</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('addUserModal')">取消</button>
+                <button onclick="submitAddUser()" style="background:var(--theme-green); color:#000;">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal" id="editUserModal">
+        <div class="modal-content">
+            <h3 id="editModalTitle">编辑账户</h3>
+            <input type="text" id="edit_username" readonly style="opacity: 0.6;">
+            <div id="old_pwd_container" style="display:none;">
+                <input type="password" id="edit_old_password" placeholder="当前密码 (必填)">
+            </div>
+            <input type="password" id="edit_new_password" placeholder="新密码">
+            <div id="role_select_container">
+                <select id="edit_role">
+                    <option value="user">二级账号(监控与SSID配置)</option>
+                    <option value="admin">管理员(全权限)</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('editUserModal')">取消</button>
+                <button onclick="submitEditUser()" style="background:var(--theme-blue); color:#000;">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rawFetch = window.fetch.bind(window);
+        window.fetch = (url, opts = {}) => {
+            const token = localStorage.getItem("cpe_token");
+            opts.headers = Object.assign({}, opts.headers || {}, token ? {"X-CPE-Token": token} : {});
+            if (token && typeof url === 'string' && url.indexOf('/cgi-bin/') === 0 && url.indexOf('_cpe_token=') === -1) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + '_cpe_token=' + encodeURIComponent(token);
+            }
+            return rawFetch(url, opts);
+        };
+        let loggedInUser = localStorage.getItem("cpe_auth");
+        let loggedInRole = localStorage.getItem("cpe_role");
+        let confirmResolver = null;
+
+        if(loggedInRole === 'admin') {
+            document.getElementById('admin-actions-bar').style.display = 'block';
+            document.getElementById('login-bg-card').style.display = 'block';
+        }
+        loadUsers();
+        loadLoginBgPreview();
+
+        async function loadUsers() {
+            let res = await fetch('/cgi-bin/cpe_api.sh?action=get_users');
+            let users = await res.json();
+            let html = "<tr><th>账号</th><th>权限角色</th><th>操作</th></tr>";
+            
+            if (loggedInRole === 'admin') {
+                users.forEach(user => {
+                    const isSystemAdmin = (user.username === 'admin');
+                    let deleteBtn = isSystemAdmin ? '' : `<button style="background:var(--theme-red);color:#fff;margin-left:5px;" onclick="delUser('${user.username}')">删除</button>`;
+                    html += `<tr>
+                        <td>${user.username}</td>
+                        <td>${user.role === 'admin' ? '管理员' : '二级账号'}</td>
+                        <td>
+                            <button style="background:var(--theme-blue);color:#000" onclick="openEditUser('${user.username}', '${user.role}')">编辑</button>
+                            ${deleteBtn}
+                        </td>
+                    </tr>`;
+                });
+            } else {
+                let me = users.find(u => u.username === loggedInUser);
+                if (me) {
+                    html += `<tr>
+                        <td>${me.username}</td>
+                        <td>${me.role === 'admin' ? '管理员' : '二级账号'}</td>
+                        <td>
+                            <button style="background:var(--theme-blue);color:#000" onclick="openEditUser('${me.username}', '${me.role}')">编辑</button>
+                        </td>
+                    </tr>`;
+                }
+            }
+            document.getElementById('usertable').innerHTML = html;
+        }
+
+        function openAddUser() {
+            document.getElementById('add_username').value = '';
+            document.getElementById('add_password').value = '';
+            document.getElementById('add_role').value = 'user';
+            document.getElementById('addUserModal').style.display = 'flex';
+        }
+
+        function openEditUser(username, role) {
+            document.getElementById('edit_username').value = username;
+            document.getElementById('edit_new_password').value = '';
+            
+            const isSelf = (username === loggedInUser);
+            if (isSelf) {
+                document.getElementById('old_pwd_container').style.display = 'block';
+                document.getElementById('edit_old_password').value = '';
+            } else {
+                document.getElementById('old_pwd_container').style.display = 'none';
+            }
+            
+            if (username === 'admin') {
+                document.getElementById('role_select_container').style.display = 'none';
+            } else if (loggedInRole === 'admin') {
+                document.getElementById('role_select_container').style.display = 'block';
+                document.getElementById('edit_role').value = role;
+            } else {
+                document.getElementById('role_select_container').style.display = 'none';
+            }
+            
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function submitAddUser() {
+            let u = document.getElementById('add_username').value.trim();
+            let p = document.getElementById('add_password').value.trim();
+            let r = document.getElementById('add_role').value;
+            if(!u || !p) return alert("请填写完整！");
+            setBusy(true, '请稍后');
+            try {
+                await fetch('/cgi-bin/cpe_api.sh?action=add_user', {
+                    method: 'POST',
+                    body: `u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}&r=${encodeURIComponent(r)}`
+                });
+                closeModal('addUserModal');
+                showToast('账户已新增');
+                await loadUsers();
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        async function submitEditUser() {
+            let username = document.getElementById('edit_username').value;
+            let newp = document.getElementById('edit_new_password').value.trim();
+            if(!newp) return alert("新密码不能为空！");
+            
+            const isSelf = (username === loggedInUser);
+            if (isSelf) {
+                let oldp = document.getElementById('edit_old_password').value.trim();
+                if(!oldp) return alert("请输入当前密码！");
+                setBusy(true, '请稍后');
+                try {
+                    let res = await fetch('/cgi-bin/cpe_api.sh?action=update_pwd', {
+                        method: 'POST',
+                        body: `u=${encodeURIComponent(username)}&oldp=${encodeURIComponent(oldp)}&newp=${encodeURIComponent(newp)}`
+                    });
+                    let json = await res.json();
+                    if (json.status === 'ok') {
+                        showToast("密码修改成功");
+                        closeModal('editUserModal');
+                    } else {
+                        alert("当前密码错误");
+                    }
+                    await loadUsers();
+                } finally {
+                    setBusy(false);
+                }
+            } else {
+                let role = document.getElementById('edit_role').value;
+                if (username === 'admin') role = 'admin';
+                setBusy(true, '请稍后');
+                try {
+                    await fetch('/cgi-bin/cpe_api.sh?action=add_user', {
+                        method: 'POST',
+                        body: `u=${encodeURIComponent(username)}&p=${encodeURIComponent(newp)}&r=${encodeURIComponent(role)}`
+                    });
+                    showToast("账户修改成功");
+                    closeModal('editUserModal');
+                    await loadUsers();
+                } finally {
+                    setBusy(false);
+                }
+            }
+        }
+
+        async function delUser(un) {
+            if(un==='admin') return alert('不可删除默认主账号');
+            if(!(await confirmAction(`确定删除账号 ${un} 吗？`))) return;
+            setBusy(true, '请稍后');
+            try {
+                await fetch('/cgi-bin/cpe_api.sh?action=del_user', {method:'POST', body:`u=${encodeURIComponent(un)}`});
+                showToast('账户已删除');
+                await loadUsers();
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        async function loadLoginBgPreview() {
+            try {
+                const res = await fetch('/cgi-bin/cpe_api.sh?action=get_login_bg');
+                const json = await res.json();
+                if (json && json.path) {
+                    document.getElementById('login_bg_preview').style.backgroundImage = `url("${json.path}?t=${Date.now()}")`;
+                }
+            } catch (e) {}
+        }
+
+        function selectedLoginBgFile() {
+            const file = document.getElementById('login_bg_file').files[0];
+            if (!file) {
+                alert('请选择 jpg 或 png 图片');
+                return null;
+            }
+            const nameOk = /\.(jpe?g|png)$/i.test(file.name);
+            const typeOk = /image\/(jpeg|png)/.test(file.type || '');
+            if (!nameOk && !typeOk) {
+                alert('仅支持 .jpg 或 .png 图片');
+                return null;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('图片大小不能超过 5MByte');
+                return null;
+            }
+            return file;
+        }
+
+        function previewLoginBg() {
+            const file = selectedLoginBgFile();
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    if (img.width < 1114 || img.height < 900) {
+                        alert(`当前图片尺寸为 ${img.width}x${img.height}，建议至少 1600x1200，避免登录页左侧拉伸或裁切后模糊。`);
+                    }
+                    document.getElementById('login_bg_preview').style.backgroundImage = `url("${reader.result}")`;
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadLoginBg() {
+            const file = selectedLoginBgFile();
+            if (!file) return;
+            setBusy(true, '请稍后');
+            try {
+                const url = `/cgi-bin/cpe_api.sh?action=set_login_bg&name=${encodeURIComponent(file.name)}&mime=${encodeURIComponent(file.type || '')}`;
+                const res = await fetch(url, {
+                    method:'POST',
+                    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                    body: file
+                });
+                const json = await res.json();
+                if (json.status === 'ok') {
+                    showToast('登录页背景已更新');
+                    await loadLoginBgPreview();
+                } else {
+                    alert(json.msg || '上传失败');
+                }
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg || '操作成功';
+            t.classList.add('show');
+            clearTimeout(showToast.timer);
+            showToast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        function setBusy(active, text) {
+            const lock = document.getElementById('pageLock');
+            if (!lock) return;
+            if (text) lock.querySelector('.page-lock-box').textContent = text;
+            lock.classList.toggle('active', !!active);
+        }
+
+        function confirmAction(text) {
+            document.getElementById('confirmText').textContent = text || '确定执行该操作吗？';
+            document.getElementById('confirmLayer').classList.add('active');
+            return new Promise(resolve => { confirmResolver = resolve; });
+        }
+
+        function resolveConfirm(ok) {
+            document.getElementById('confirmLayer').classList.remove('active');
+            if (confirmResolver) confirmResolver(!!ok);
+            confirmResolver = null;
+        }
+    </script>
+</body>
+</html>

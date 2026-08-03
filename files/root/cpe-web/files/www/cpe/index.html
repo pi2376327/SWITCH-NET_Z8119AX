@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/cpe/assets/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPE 系统管理</title>
+    <style>
+        :root {
+            --bg-main: #f3f6fb;
+            --bg-card: #ffffff;
+            --border-color: #dfe7f3;
+            --text-main: #071b3a;
+            --text-muted: #65748e;
+            --theme-blue: #3568b7;
+            --theme-blue-soft: #eaf1fb;
+            --theme-red: #d94a38;
+        }
+        * { box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; }
+        body {
+            margin: 0;
+            display: flex;
+            min-width: 0;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+        }
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: grid;
+            grid-template-columns: minmax(420px, 58%) minmax(360px, 42%);
+            align-items: stretch;
+            justify-content: center;
+            min-height: 100vh;
+            background: #fff;
+        }
+        .login-visual {
+            position: relative;
+            align-self: stretch;
+            min-height: 100vh;
+            overflow: hidden;
+            padding: 56px 70px;
+            background: url('/cpe/assets/login-default.png') center / 100% 100% no-repeat;
+            background-size: 100% 100%;
+            background-position: center;
+            color: #214478;
+        }
+        .login-visual.has-image {
+            background-image: var(--login-bg);
+        }
+        .login-visual .brand-mark,
+        .login-visual .hero-orbit,
+        .login-visual .login-copy { display: none; }
+        .brand-mark { display:flex; align-items:center; gap:12px; font-weight:800; font-size:1.45rem; letter-spacing:.02em; }
+        .brand-orbit {
+            width:28px; height:28px; border:1.8px solid #3568b7; border-radius:50%; position:relative;
+        }
+        .brand-orbit::before, .brand-orbit::after {
+            content:""; position:absolute; inset:4px; border:1px solid #6f9bd7; border-radius:50%;
+        }
+        .brand-orbit::after { inset:9px 3px; }
+        .hero-orbit {
+            position:absolute; width:460px; height:460px; right:12%; bottom:12%;
+            border:2px solid rgba(53,104,183,.28); border-radius:50%;
+        }
+        .hero-orbit::before, .hero-orbit::after {
+            content:""; position:absolute; inset:0; border:1px solid rgba(53,104,183,.2); border-radius:50%;
+            transform: scaleX(.62);
+        }
+        .hero-orbit::after { transform: scaleY(.62); }
+        .login-copy { position:relative; z-index:1; margin-top:250px; }
+        .login-copy .eyebrow { font-size:.95rem; letter-spacing:.42em; color:#3f65a0; }
+        .login-copy h1 { margin:36px 0 18px; font-size:5.4rem; line-height:1; color:#203d71; }
+        .login-copy p { margin:0; font-size:1.25rem; color:#31598f; }
+        .login-box {
+            width: min(450px, 80%);
+            padding: 0;
+            text-align: left;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            justify-self: center;
+            align-self: center;
+        }
+        .login-box h2 {
+            margin: 0 0 10px;
+            color: #071b3a;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+        .login-subtitle { margin: 0 0 38px; color: #8493b2; }
+        .login-box input {
+            width: 100%;
+            margin-bottom: 18px;
+            padding: 14px 18px;
+            border: 1px solid #d5dbe5;
+            border-radius: 14px;
+            background: #fff;
+            color: #071b3a;
+            font-size: 1rem;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 14px;
+            border: 0;
+            border-radius: 14px;
+            background: linear-gradient(90deg, #315aa4, #4177ce);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(49,90,164,.28);
+        }
+        #loginErr {
+            display: none;
+            margin: 14px 0 0;
+            color: var(--theme-red);
+            font-size: 0.85rem;
+        }
+        .sidebar {
+            width: 220px;
+            min-width: 220px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            z-index: 10;
+        }
+        .sidebar-header {
+            padding: 24px 22px;
+            text-align: left;
+            background: #fff;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-header h2 {
+            margin: 0;
+            color: var(--theme-blue);
+            font-size: 1.15rem;
+        }
+        .nav-links {
+            flex: 1;
+            padding: 12px 0;
+            overflow-y: auto;
+        }
+        .nav-item, .submenu-item {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 600;
+            user-select: none;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 14px 22px;
+            border-left: 4px solid transparent;
+        }
+        .nav-item:hover, .submenu-item:hover {
+            background: #f4f7fb;
+            color: var(--text-main);
+        }
+        .nav-item.active, .submenu-item.active {
+            background: var(--theme-blue-soft);
+            color: var(--theme-blue);
+            border-left-color: var(--theme-blue);
+        }
+        .nav-item-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .submenu {
+            display: none;
+            background: #f8fbff;
+        }
+        .submenu-item {
+            padding: 12px 22px 12px 38px;
+            font-size: 0.95rem;
+        }
+        .nav-item-group.open .submenu { display: block; }
+        .arrow { font-size: 0.75rem; transition: transform 0.2s; }
+        .nav-item-group.open .arrow { transform: rotate(90deg); }
+        .logout-item {
+            flex: 0 0 auto;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            display:flex;
+            flex-direction:column;
+            align-items:flex-start;
+            gap:14px;
+        }
+        #currentUserLabel { color: var(--text-muted); font-size: .82rem; font-weight: 700; }
+        .logout-user { display:inline-block; background: var(--theme-red); color: #fff; font-size: 1rem; font-weight: 800; padding: 8px 14px; border-radius: 6px; box-shadow: 0 8px 16px rgba(217,74,56,.18); transition: background .18s ease, box-shadow .18s ease, transform .18s ease; }
+        .logout-user:hover { background: #c43f30; box-shadow: 0 10px 20px rgba(217,74,56,.24); transform: translateX(2px); }
+        .content {
+            flex: 1;
+            min-width: 0;
+            height: 100vh;
+            position: relative;
+            background: var(--bg-main);
+        }
+        #main-frame {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: var(--bg-main);
+        }
+        @media (max-width: 760px) {
+            .login-overlay { grid-template-columns: 1fr; }
+            .login-visual { display:none; }
+            .login-box { width: min(420px, calc(100% - 36px)); }
+            .sidebar {
+                width: 176px;
+                min-width: 176px;
+            }
+            .nav-item { padding: 13px 16px; }
+            .submenu-item { padding-left: 28px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-overlay" id="loginWall">
+        <section class="login-visual" id="loginVisual">
+            <div class="brand-mark"><span class="brand-orbit"></span><span>SDWAN CPE</span></div>
+            <div class="hero-orbit"></div>
+            <div class="login-copy">
+                <div class="eyebrow">CPE WEB CONTROL</div>
+                <h1>天璇</h1>
+                <p>专线接入 · 流量监控 · 网络配置</p>
+            </div>
+        </section>
+        <div class="login-box">
+            <h2>欢迎登录</h2>
+            <p class="login-subtitle">SDWAN CPE 控制台</p>
+            <input type="text" id="username" placeholder="账号" onkeyup="if(event.key==='Enter')checkLogin()">
+            <input type="password" id="password" placeholder="密码" onkeyup="if(event.key==='Enter')checkLogin()">
+            <button onclick="checkLogin()">安全登录</button>
+            <p id="loginErr">账号或密码错误</p>
+        </div>
+    </div>
+
+    <aside class="sidebar">
+        <div class="sidebar-header"><h2>CPE 控制台</h2></div>
+        <nav class="nav-links">
+            <div class="nav-item active" onclick="loadPage('/cpe/speed.html', this)">流量监控</div>
+            <div class="nav-item-group" id="nav-network-group">
+                <div class="nav-item" onclick="toggleSubmenu('nav-network-group')">
+                    <span>网络配置</span><span class="arrow">▶</span>
+                </div>
+                <div class="submenu">
+                    <div class="submenu-item" id="nav-interface-item" onclick="loadPage('/cpe/network.html', this)">接口配置</div>
+                    <div class="submenu-item" onclick="loadPage('/cpe/wifi.html', this)">WIFI配置</div>
+                </div>
+            </div>
+            <div class="nav-item-group" id="nav-business-group">
+                <div class="nav-item" onclick="toggleSubmenu('nav-business-group')">
+                    <span>业务配置</span><span class="arrow">▶</span>
+                </div>
+                <div class="submenu">
+                    <div class="submenu-item" onclick="loadPage('/cpe/basic.html', this)">基础配置</div>
+                    <div class="submenu-item" onclick="loadPage('/cpe/openvpn.html', this)">SDWAN隧道</div>
+                    <div class="submenu-item" onclick="loadPage('/cpe/qos.html', this)">带宽限制</div>
+                    <div class="submenu-item" id="nav-redsocks" onclick="loadPage('/cpe/redsocks.html', this)">流量转发</div>
+                </div>
+            </div>
+            <div class="nav-item" onclick="loadPage('/cpe/settings.html', this)">系统设置</div>
+        </nav>
+        <div class="nav-item logout-item" onclick="logout()"><span id="currentUserLabel">当前用户：-</span><span class="logout-user">退出登陆</span></div>
+    </aside>
+
+    <main class="content">
+        <iframe id="main-frame" src=""></iframe>
+    </main>
+
+    <script>
+        const rawFetch = window.fetch.bind(window);
+        window.fetch = (url, opts = {}) => {
+            const token = localStorage.getItem("cpe_token");
+            opts.headers = Object.assign({}, opts.headers || {}, token ? {"X-CPE-Token": token} : {});
+            if (token && typeof url === 'string' && url.indexOf('/cgi-bin/') === 0 && url.indexOf('_cpe_token=') === -1) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + '_cpe_token=' + encodeURIComponent(token);
+            }
+            return rawFetch(url, opts);
+        };
+
+        async function checkLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const res = await fetch('/cgi-bin/cpe_api.sh?action=login', {
+                method: 'POST',
+                body: `u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`
+            });
+            const json = await res.json();
+            if (json.status === 'ok') {
+                localStorage.setItem("cpe_auth", u);
+                localStorage.setItem("cpe_role", json.role);
+                localStorage.setItem("cpe_token", json.token);
+                document.getElementById('loginWall').style.display = 'none';
+                initMenu();
+            } else {
+                document.getElementById('loginErr').style.display = 'block';
+            }
+        }
+
+        async function logout() {
+            try { await fetch('/cgi-bin/cpe_api.sh?action=logout'); } catch(e) {}
+            localStorage.removeItem("cpe_auth");
+            localStorage.removeItem("cpe_role");
+            localStorage.removeItem("cpe_token");
+            window.location.reload();
+        }
+
+        function toggleSubmenu(id) {
+            document.getElementById(id).classList.toggle('open');
+        }
+
+        function initMenu() {
+            const role = localStorage.getItem("cpe_role");
+            const isAdmin = role === "admin";
+            document.getElementById('currentUserLabel').textContent = '当前用户：' + (localStorage.getItem("cpe_auth") || '-');
+            document.getElementById('nav-business-group').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-network-group').style.display = 'flex';
+            const ifaceItem = document.getElementById('nav-interface-item');
+            if (ifaceItem) ifaceItem.style.display = isAdmin ? 'block' : 'none';
+            loadPage('/cpe/speed.html', document.querySelector('.nav-item.active'));
+        }
+
+        function loadPage(url, el) {
+            document.querySelectorAll('.nav-item, .submenu-item').forEach(e => e.classList.remove('active'));
+            if (el) el.classList.add('active');
+            document.getElementById('main-frame').src = url;
+        }
+
+        if (localStorage.getItem("cpe_auth")) {
+            document.getElementById('loginWall').style.display = 'none';
+            initMenu();
+        }
+
+        async function loadLoginBackground() {
+            try {
+                const res = await rawFetch('/cgi-bin/cpe_api.sh?action=get_login_bg');
+                const json = await res.json();
+                if (json && json.path) {
+                    const visual = document.getElementById('loginVisual');
+                    visual.style.setProperty('--login-bg', `url("${json.path}")`);
+                    visual.classList.add('has-image');
+                }
+            } catch (e) {}
+        }
+        loadLoginBackground();
+    </script>
+</body>
+</html>

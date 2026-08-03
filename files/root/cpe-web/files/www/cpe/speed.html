@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/cpe/assets/favicon.png">
+    <title>SDWAN CPE 流量监控系统</title>
+    <script src="/cpe/assets/echarts.min.js"></script>
+    <style>
+        :root { --bg-main: #f4f7fb; --bg-card: #ffffff; --border-color: #dfe7f3; --text-main: #071b3a; --text-muted: #64748b; --theme-blue: #3568b7; --theme-blue-soft: #eaf1fb; --theme-green: #18a178; --theme-red: #d94a38; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg-main); color: var(--text-main); padding: 30px 36px; margin: 0; }
+        .container { max-width: 1560px; margin: 0 auto; }
+        .header-panel { display:flex; justify-content:space-between; align-items:center; margin-bottom: 26px; }
+        h1 { font-size: 1.8rem; margin: 0; color: var(--text-main); font-weight: 800; }
+        .status-pill { color: var(--theme-green); font-weight: 700; }
+        .status-pill::before { content:""; display:inline-block; width:9px; height:9px; margin-right:8px; border-radius:50%; background:var(--theme-green); }
+        .navigation-tabs { display: flex; justify-content: flex-start; gap: 8px; margin-bottom: 20px; }
+        .nav-tab { background: #fff; color: #52627a; border: 1px solid var(--border-color); padding: 8px 22px; font-weight: 700; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .nav-tab.active { background: var(--theme-blue-soft); color: var(--theme-blue); border-color: #bdd0ed; }
+        .btn-wrapper { text-align: right; width: 100%; margin-bottom: 16px; display: none; }
+        .control-row { display: inline-flex; gap: 4px; background: #fff; border: 1px solid var(--border-color); padding: 4px; border-radius: 6px; flex-wrap: wrap; justify-content: center; }
+        .control-row button { background: transparent; border: none; color: #5d6d8d; padding: 7px 12px; font-weight: 600; cursor: pointer; border-radius: 4px; }
+        .control-row button.active { background: var(--theme-blue-soft); color: var(--theme-blue); font-weight: 800; }
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 25px; }
+        .chart-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; height: 380px; box-shadow: 0 12px 30px rgba(29, 53, 87, .08); }
+        #realtime-grid { display: grid; } #history-grid { display: none; }
+        @media (max-width: 760px) {
+            body { padding: 20px 16px; }
+            .header-panel { align-items:flex-start; flex-direction:column; gap:10px; }
+            .navigation-tabs, .control-row { width:100%; }
+            .nav-tab { flex:1; text-align:center; padding-left:10px; padding-right:10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-panel"><h1>流量监控</h1><div class="status-pill">采集服务运行中</div></div>
+        <div class="navigation-tabs">
+            <div class="nav-tab active" id="tab-realtime" onclick="switchMode('realtime')">实时网络监控</div>
+            <div class="nav-tab" id="tab-history" onclick="switchMode('history')">历史网络查看</div>
+        </div>
+        <div class="btn-wrapper" id="history-controls">
+            <div class="control-row">
+                <button onclick="changeHistoryRange('30m', 60, this)">30分钟</button>
+                <button class="active" onclick="changeHistoryRange('1h', 60, this)">1小时</button>
+                <button onclick="changeHistoryRange('6h', 60, this)">6小时</button>
+                <button onclick="changeHistoryRange('12h', 60, this)">12小时</button>
+                <button onclick="changeHistoryRange('24h', 60, this)">24小时</button>
+                <button onclick="changeHistoryRange('2d', 60, this)">2天</button>
+                <button onclick="changeHistoryRange('7d', 300, this)">7天</button>
+                <button onclick="changeHistoryRange('15d', 300, this)">15天</button>
+                <button onclick="changeHistoryRange('30d', 300, this)">1个月</button>
+                <button onclick="changeHistoryRange('90d', 1800, this)">3个月</button>
+                <button onclick="changeHistoryRange('180d', 7200, this)">6个月</button>
+                <button onclick="changeHistoryRange('365d', 7200, this)">1年</button>
+            </div>
+        </div>
+        <div class="chart-grid" id="realtime-grid"></div>
+        <div class="chart-grid" id="history-grid"></div>
+    </div>
+    <script>
+        const rawFetch = window.fetch.bind(window);
+        window.fetch = (url, opts = {}) => {
+            const token = localStorage.getItem("cpe_token");
+            opts.headers = Object.assign({}, opts.headers || {}, token ? {"X-CPE-Token": token} : {});
+            if (token && typeof url === 'string' && url.indexOf('/cgi-bin/') === 0 && url.indexOf('_cpe_token=') === -1) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + '_cpe_token=' + encodeURIComponent(token);
+            }
+            return rawFetch(url, opts);
+        };
+        if(!localStorage.getItem("cpe_auth")) { document.body.innerHTML = "<h2 style='text-align:center'>未授权</h2>"; throw "Auth err"; }
+        let currentRange = '1h'; let currentResolution = 60; let realtimeCharts = {}; let historyCharts = {}; let previousStats = {}; let previousTime = Date.now(); let promisedBandwidthMbps = 0;
+        const realtimeStateKey = 'cpe_realtime_chart_state_v2';
+        const nameMapping = { 'SDWAN_TOTAL': 'SDWAN专线流量图', 'WAN_TOTAL': 'WAN口流量图', 'LAN_TOTAL': 'LAN口流量图' };
+        const orderedInterfaces = ['SDWAN_TOTAL', 'WAN_TOTAL', 'LAN_TOTAL'];
+
+        let dashboardInitialized = false;
+
+        window.onload = () => {
+            if (window.echarts) {
+                initializeDashboard();
+                return;
+            }
+            loadEChartsFallback();
+        };
+
+        function loadEChartsFallback() {
+            const sources = [
+                'https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js',
+                'https://unpkg.com/echarts@5.5.1/dist/echarts.min.js'
+            ];
+            const grid = document.getElementById('realtime-grid');
+            grid.innerHTML = "<div class='chart-card' style='height:auto'>正在加载图表组件...</div>";
+
+            const trySource = index => {
+                if (index >= sources.length) {
+                    grid.innerHTML = "<div class='chart-card' style='height:auto'>图表组件加载失败。请检查设备时间、DNS 和 HTTPS 证书，或将 echarts.min.js 放到 /www/cpe/assets/echarts.min.js。</div>";
+                    return;
+                }
+
+                const script = document.createElement('script');
+                let finished = false;
+                const timeout = setTimeout(() => finish(false), 12000);
+                const finish = success => {
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(timeout);
+                    script.onload = null;
+                    script.onerror = null;
+                    if (success && window.echarts) initializeDashboard();
+                    else {
+                        script.remove();
+                        trySource(index + 1);
+                    }
+                };
+                script.src = sources[index];
+                script.async = true;
+                script.referrerPolicy = 'no-referrer';
+                script.onload = () => finish(true);
+                script.onerror = () => finish(false);
+                document.head.appendChild(script);
+            };
+
+            trySource(0);
+        }
+
+        function initializeDashboard() {
+            if (dashboardInitialized || !window.echarts) return;
+            dashboardInitialized = true;
+            const rtGrid = document.getElementById('realtime-grid'); const hiGrid = document.getElementById('history-grid');
+            rtGrid.innerHTML = '';
+            hiGrid.innerHTML = '';
+            const savedState = loadRealtimeState();
+            orderedInterfaces.forEach(iface => {
+                const cardRt = document.createElement('div'); cardRt.className = 'chart-card'; rtGrid.appendChild(cardRt);
+                realtimeCharts[iface] = echarts.init(cardRt);
+                const savedIface = savedState.charts && savedState.charts[iface] ? savedState.charts[iface] : {};
+                realtimeCharts[iface].timeline = Array.isArray(savedIface.timeline) && savedIface.timeline.length === 30 ? savedIface.timeline : new Array(30).fill('');
+                realtimeCharts[iface].rxTrack = Array.isArray(savedIface.rxTrack) && savedIface.rxTrack.length === 30 ? savedIface.rxTrack : new Array(30).fill(0);
+                realtimeCharts[iface].txTrack = Array.isArray(savedIface.txTrack) && savedIface.txTrack.length === 30 ? savedIface.txTrack : new Array(30).fill(0);
+                renderEChart(realtimeCharts[iface], iface, realtimeCharts[iface].timeline, realtimeCharts[iface].rxTrack, realtimeCharts[iface].txTrack, true);
+            });
+            previousStats = savedState.previousStats || {};
+            previousTime = savedState.previousTime || Date.now();
+            switchMode('realtime'); setInterval(loadRealtimeData, 2000); setInterval(loadHistoryData, 30000); 
+        }
+
+        function loadRealtimeState() {
+            try {
+                const raw = localStorage.getItem(realtimeStateKey);
+                if (!raw) return {};
+                const state = JSON.parse(raw);
+                if (state.token !== localStorage.getItem('cpe_token')) return {};
+                return state;
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveRealtimeState() {
+            const charts = {};
+            orderedInterfaces.forEach(iface => {
+                const c = realtimeCharts[iface];
+                if (!c) return;
+                charts[iface] = { timeline: c.timeline, rxTrack: c.rxTrack, txTrack: c.txTrack };
+            });
+            try {
+                localStorage.setItem(realtimeStateKey, JSON.stringify({
+                    token: localStorage.getItem('cpe_token'),
+                    previousStats,
+                    previousTime,
+                    charts
+                }));
+            } catch (e) {}
+        }
+
+        function switchMode(mode) {
+            document.getElementById('tab-realtime').classList.remove('active'); document.getElementById('tab-history').classList.remove('active');
+            if(mode === 'realtime') {
+                document.getElementById('tab-realtime').classList.add('active'); document.getElementById('history-controls').style.display = 'none'; document.getElementById('history-grid').style.display = 'none'; document.getElementById('realtime-grid').style.display = 'grid';
+                for (let k in realtimeCharts) realtimeCharts[k].resize(); loadRealtimeData();
+            } else {
+                document.getElementById('tab-history').classList.add('active'); document.getElementById('history-controls').style.display = 'block'; document.getElementById('realtime-grid').style.display = 'none'; document.getElementById('history-grid').style.display = 'grid';
+                for (let k in historyCharts) historyCharts[k].resize(); loadHistoryData();
+            }
+        }
+
+        async function loadRealtimeData() {
+            try {
+                const res = await fetch('/cgi-bin/get_net_speed'); const currentStats = await res.json(); 
+                const qosDownload = Number(currentStats._meta && currentStats._meta.qos_download);
+                if (Number.isFinite(qosDownload) && qosDownload >= 0) promisedBandwidthMbps = qosDownload / 1000;
+                const now = Date.now(); const timeDelta = (now - previousTime) / 1000 || 1; previousTime = now;
+                orderedInterfaces.forEach(iface => {
+                    let rxMbps = 0, txMbps = 0;
+                    if (iface === 'SDWAN_TOTAL') {
+                        const curIfb0 = currentStats['ifb0'] || {tx:0}; const prvIfb0 = previousStats['ifb0'] || curIfb0;
+                        const curIfb1 = currentStats['ifb1'] || {tx:0}; const prvIfb1 = previousStats['ifb1'] || curIfb1;
+                        rxMbps = parseFloat((((curIfb0.tx - prvIfb0.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                        txMbps = parseFloat((((curIfb1.tx - prvIfb1.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                    } else if (iface === 'WAN_TOTAL') {
+                        const wanIface = currentStats._meta && currentStats._meta.wan ? currentStats._meta.wan : 'eth0';
+                        const current = currentStats[wanIface] || {rx:0, tx:0}; const prev = previousStats[wanIface] || current;
+                        rxMbps = parseFloat((((current.rx - prev.rx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                        txMbps = parseFloat((((current.tx - prev.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                    } else if (iface === 'LAN_TOTAL') {
+                        const current = currentStats['br-lan'] || {rx:0, tx:0}; const prev = previousStats['br-lan'] || current;
+                        rxMbps = parseFloat((((current.rx - prev.rx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                        txMbps = parseFloat((((current.tx - prev.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                    } else {
+                        const current = currentStats[iface] || {rx:0, tx:0}; const prev = previousStats[iface] || current;
+                        rxMbps = parseFloat((((current.rx - prev.rx) * 8 / timeDelta) / 1024 / 1024).toFixed(2)); 
+                        txMbps = parseFloat((((current.tx - prev.tx) * 8 / timeDelta) / 1024 / 1024).toFixed(2));
+                    }
+                    if (rxMbps < 0 || isNaN(rxMbps)) rxMbps = 0; if (txMbps < 0 || isNaN(txMbps)) txMbps = 0;
+                    const c = realtimeCharts[iface]; const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                    c.timeline.shift(); c.timeline.push(timeStr); c.rxTrack.shift(); c.rxTrack.push(rxMbps); c.txTrack.shift(); c.txTrack.push(txMbps);
+                    renderEChart(realtimeCharts[iface], iface, c.timeline, c.rxTrack, c.txTrack, true);
+                });
+                previousStats = currentStats;
+                saveRealtimeState();
+            } catch (e) { }
+        }
+
+        function handleSessionExpired() {
+            alert('请重新登录');
+            localStorage.removeItem('cpe_auth');
+            localStorage.removeItem('cpe_role');
+            localStorage.removeItem('cpe_token');
+            window.top.location.reload();
+        }
+
+        function ensureHistoryChart(iface) {
+            if (historyCharts[iface]) return historyCharts[iface];
+            const cardHi = document.createElement('div');
+            cardHi.className = 'chart-card';
+            document.getElementById('history-grid').appendChild(cardHi);
+            historyCharts[iface] = echarts.init(cardHi);
+            return historyCharts[iface];
+        }
+
+        async function loadHistoryData() {
+            try {
+                const response = await fetch(`/cgi-bin/get_history_speed?${currentRange}&${currentResolution}`); const data = await response.json();
+                if (data && data.msg === 'unauthorized') return handleSessionExpired();
+                orderedInterfaces.forEach(iface => {
+                    const records = data[iface] || [];
+                    const labels = records.map(r => { 
+                        let timestamp = parseInt(r.time) * 1000;
+                        if(isNaN(timestamp)) return '';
+                        let d = new Date(timestamp); 
+                        if (currentResolution >= 7200) return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+                        return currentResolution >= 300 ? `${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+                    });
+                    const rxData = records.map(r => r.rx); const txData = records.map(r => r.tx);
+                    renderEChart(ensureHistoryChart(iface), iface, labels, rxData, txData, false);
+                });
+            } catch (e) { }
+        }
+
+        function changeHistoryRange(range, resolution, btn) { currentRange = range; currentResolution = resolution; document.querySelectorAll('.control-row button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); loadHistoryData(); }
+        
+        function renderEChart(chartInstance, iface, labels, rx, tx, isSmooth) {
+            const promiseName = `承诺带宽：${promisedBandwidthMbps.toFixed(2)} M`;
+            const showPromise = iface === 'SDWAN_TOTAL' && promisedBandwidthMbps > 0;
+            const legendData = ['下载 (RX)', '上行 (TX)'];
+            const series = [
+                { name: '下载 (RX)', type: 'line', smooth: isSmooth, showSymbol: false, areaStyle: { opacity: .16 }, itemStyle: { color: '#3568b7' }, data: rx },
+                { name: '上行 (TX)', type: 'line', smooth: isSmooth, showSymbol: false, itemStyle: { color: '#d98a12' }, lineStyle: { type: 'dashed' }, data: tx }
+            ];
+            if (showPromise) series.push({ name: promiseName, type: 'line', smooth: false, showSymbol: false, silent: true, itemStyle: { color: '#e24a4a' }, lineStyle: { color: '#e24a4a', width: 2 }, data: labels.map(() => promisedBandwidthMbps) });
+            const promiseGraphic = showPromise ? [{
+                type: 'group', right: 18, top: 12,
+                children: [
+                    { type: 'line', shape: { x1: 0, y1: 8, x2: 28, y2: 8 }, style: { stroke: '#e24a4a', lineWidth: 2 } },
+                    { type: 'text', style: { x: 36, y: 0, text: promiseName, fill: '#e24a4a', font: '700 13px sans-serif' } }
+                ]
+            }] : [];
+            chartInstance.setOption({
+                backgroundColor: 'transparent', title: { text: nameMapping[iface] || iface, left: 8, top: 0, textStyle: { color: '#071b3a', fontSize: 18, fontWeight: 800 } },
+                tooltip: { trigger: 'axis' }, legend: { data: legendData, bottom: 5, textStyle: { color: '#52627a' } },
+                graphic: promiseGraphic,
+                grid: { top: 70, bottom: 65, left: 65, right: 30 },
+                xAxis: { type: 'category', boundaryGap: false, data: labels, axisLine: { lineStyle: { color: '#d6e0ef' } }, axisLabel: { color: '#7b8cab' } },
+                yAxis: { type: 'value', name: 'Mbps', splitLine: { lineStyle: { color: '#edf2f8' } }, axisLabel: { color: '#7b8cab' }, nameTextStyle: { color: '#7b8cab' } },
+                series
+            });
+        }
+        window.addEventListener('resize', () => { for (let k in realtimeCharts) realtimeCharts[k].resize(); for (let k in historyCharts) historyCharts[k].resize(); });
+    </script>
+</body>
+</html>

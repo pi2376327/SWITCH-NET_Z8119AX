@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/cpe/assets/favicon.png">
+    <title>接口配置</title>
+    <style>
+        :root {
+            --bg-main: #f3f6fb;
+            --bg-card: #ffffff;
+            --border-color: #dfe7f3;
+            --text-main: #071b3a;
+            --text-muted: #64748b;
+            --theme-blue: #3568b7;
+            --theme-green: #18a178;
+            --theme-red: #d94a38;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 30px;
+            margin: 0;
+        }
+        .container {
+            max-width: none;
+            width: 100%;
+            margin: 0 auto;
+        }
+        #interfaces-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(680px, 1fr));
+            gap: 20px;
+            align-items: stretch;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin: 0;
+            color: var(--text-main);
+        }
+        .btn-add {
+            background: var(--theme-blue);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 25px;
+            box-shadow: 0 12px 30px rgba(29, 53, 87, .08);
+        }
+        #interfaces-container .card {
+            margin-bottom: 0;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        .card-header h2 {
+            margin: 0;
+            color: var(--theme-blue);
+            font-size: 1.3rem;
+            text-transform: uppercase;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 15px;
+        }
+        .dhcp-section { grid-column: 1 / -1; }
+        @media (max-width: 1100px) {
+            #interfaces-container { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+        }
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        input, select {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+        }
+        input:focus, select:focus {
+            border-color: var(--theme-blue);
+            outline: none;
+        }
+        .dhcp-section {
+            border-top: 1px dashed var(--border-color);
+            margin-top: 20px;
+            padding-top: 20px;
+            min-height: 160px;
+        }
+        .dhcp-fields { min-height: 96px; }
+        .dhcp-fields.hidden { visibility: hidden; pointer-events: none; }
+        .dhcp-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .dhcp-title-row h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 20px;
+        }
+        .btn-save {
+            background: var(--theme-blue);
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-left: auto;
+        }
+        .btn-del {
+            background: #fff2f0;
+            color: var(--theme-red);
+            border: 1px solid var(--theme-red);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            width: 380px;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            color: var(--theme-blue);
+            margin-bottom: 20px;
+        }
+        .modal-content .form-group {
+            margin-bottom: 15px;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-cancel {
+            background: #eaf1fb;
+            color: var(--theme-blue);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            color: #13BB8A;
+            padding: 12px 20px;
+            border: 1px solid #b9eadb;
+            border-radius: 8px;
+            box-shadow: 0 14px 34px rgba(15, 65, 55, .18);
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1001;
+        }
+        .toast.show { opacity: 1; }
+        .page-lock {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(3, 7, 18, 0.64);
+            z-index: 1000;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+        .page-lock.active { display: flex; }
+        .page-lock-box {
+            min-width: 220px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 18px 42px rgba(0,0,0,.35);
+        }
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 3px solid #dbe6f5;
+            border-top-color: var(--theme-blue);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .confirm-layer {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(3, 7, 18, 0.64);
+            z-index: 1002;
+        }
+        .confirm-layer.active { display: flex; }
+        .confirm-box {
+            min-width: 180px;
+            max-width: 360px;
+            padding: 20px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 18px 42px rgba(0,0,0,.35);
+        }
+        .confirm-box p { margin: 0 0 18px; }
+        .confirm-actions { display:flex; gap:10px; justify-content:center; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast">配置成功，正在重启网络</div>
+    <div id="pageLock" class="page-lock"><div class="page-lock-box"><div class="spinner"></div><div class="lock-text">正在执行，请稍后</div></div></div>
+    <div id="confirmLayer" class="confirm-layer">
+        <div class="confirm-box">
+            <p id="confirmText">确定执行该操作吗？</p>
+            <div class="confirm-actions">
+                <button class="btn-cancel" onclick="resolveConfirm(false)">取消</button>
+                <button class="btn-del" onclick="resolveConfirm(true)">确定</button>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="header-row">
+            <h1>接口配置</h1>
+            <button class="btn-add" onclick="openAddModal()">+ 新增接口</button>
+        </div>
+        <div id="interfaces-container"></div>
+    </div>
+
+    <!-- Add Interface Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <h3>新增逻辑接口</h3>
+            <div class="form-group">
+                <label>接口名称 (英文小写)</label>
+                <input type="text" id="add_name" placeholder="例如: lan2, iot" oninput="this.value=this.value.replace(/[^a-z0-9_]/g,'')">
+            </div>
+            <div class="form-group">
+                <label>协议</label>
+                <select id="add_proto" onchange="toggleAddStaticFields()">
+                    <option value="static" selected>静态 IP</option>
+                    <option value="dhcp">DHCP 客户端</option>
+                    <option value="none">未配置</option>
+                </select>
+            </div>
+            <div id="add_static_fields" style="display: block;">
+                <div class="form-group">
+                    <label>IP 地址</label>
+                    <input type="text" id="add_ipaddr" placeholder="192.168.151.1">
+                </div>
+                <div class="form-group">
+                    <label>子网掩码</label>
+                    <input type="text" id="add_netmask" value="255.255.255.0">
+                </div>
+                <div class="form-group">
+                    <label>默认网关</label>
+                    <input type="text" id="add_gateway" placeholder="可留空">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>物理接口 (Device)</label>
+                <select id="add_device_sel" onchange="toggleAddCustomDevice()"></select>
+                <input type="text" id="add_device_custom" placeholder="输入自定义物理接口" style="display: none; margin-top: 8px;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button onclick="submitAdd()" style="background:var(--theme-green); color:#000; font-weight:bold; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rawFetch = window.fetch.bind(window);
+        window.fetch = (url, opts = {}) => {
+            const token = localStorage.getItem("cpe_token");
+            opts.headers = Object.assign({}, opts.headers || {}, token ? {"X-CPE-Token": token} : {});
+            if (token && typeof url === 'string' && url.indexOf('/cgi-bin/') === 0 && url.indexOf('_cpe_token=') === -1) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + '_cpe_token=' + encodeURIComponent(token);
+            }
+            return rawFetch(url, opts);
+        };
+        if(localStorage.getItem("cpe_role") !== "admin") {
+            document.body.innerHTML = "<h2 style='text-align:center;margin-top:50px;'>无权限访问</h2>";
+            throw "Auth err";
+        }
+
+        let networkConfig = {};
+        let dhcpConfig = {};
+        let runtimeDevices = [];
+        let originalNetworkText = "";
+        let originalDhcpText = "";
+        let confirmResolver = null;
+
+        async function init() {
+            try {
+                const [resNet, resDhcp, resDevices] = await Promise.all([
+                    fetch('/cgi-bin/cpe_api.sh?action=get_network'),
+                    fetch('/cgi-bin/cpe_api.sh?action=get_dhcp'),
+                    fetch('/cgi-bin/cpe_api.sh?action=get_devices')
+                ]);
+                originalNetworkText = await resNet.text();
+                originalDhcpText = await resDhcp.text();
+                if (originalNetworkText.indexOf('unauthorized') !== -1 || originalDhcpText.indexOf('unauthorized') !== -1) {
+                    handleSessionExpired();
+                    return;
+                }
+                
+                networkConfig = parseUciShow(originalNetworkText);
+                dhcpConfig = parseUciShow(originalDhcpText);
+                const deviceData = await resDevices.json();
+                runtimeDevices = Array.isArray(deviceData) ? deviceData : [];
+                
+                renderInterfaces();
+            } catch (e) {
+                alert("加载配置失败，请检查网络或后端服务");
+            }
+        }
+
+        function handleSessionExpired() {
+            alert('请重新登录');
+            localStorage.removeItem('cpe_auth');
+            localStorage.removeItem('cpe_role');
+            localStorage.removeItem('cpe_token');
+            window.top.location.reload();
+        }
+
+        function uciQuote(value) {
+            value = String(value || '').trim();
+            if (value.indexOf("'") !== -1) throw new Error('配置值不能包含单引号');
+            return `'${value}'`;
+        }
+
+        async function postUci(action, cmds) {
+            const res = await fetch(`/cgi-bin/cpe_api.sh?action=${action}`, {
+                method: 'POST',
+                body: cmds.join('\n')
+            });
+            const json = await res.json();
+            if (json && json.msg === 'unauthorized') {
+                handleSessionExpired();
+                return false;
+            }
+            return json && json.status === 'ok';
+        }
+
+        function parseUciShow(text) {
+            const lines = text.split('\n');
+            const config = {};
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line || line.startsWith('#')) return;
+                const eqIdx = line.indexOf('=');
+                if (eqIdx === -1) return;
+                const key = line.substring(0, eqIdx);
+                let val = line.substring(eqIdx + 1);
+                if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) {
+                    val = val.substring(1, val.length - 1);
+                }
+                
+                const parts = key.split('.');
+                if (parts.length < 2) return;
+                const section = parts[1];
+                
+                if (!config[section]) {
+                    config[section] = { _name: section, props: {} };
+                }
+                
+                if (parts.length === 2) {
+                    config[section]._type = val;
+                } else {
+                    const propName = parts.slice(2).join('.');
+                    let propVal = val;
+                    if ((propVal.startsWith("'") && propVal.endsWith("'")) || (propVal.startsWith('"') && propVal.endsWith('"'))) {
+                        propVal = propVal.substring(1, propVal.length - 1);
+                    }
+                    if (config[section].props[propName]) {
+                        config[section].props[propName] += ' ' + propVal;
+                    } else {
+                        config[section].props[propName] = propVal;
+                    }
+                }
+            });
+            return config;
+        }
+
+        function getPhysicalDevices() {
+            const devices = new Set(['eth0', 'eth1', 'eth2', 'br-lan']);
+            runtimeDevices.forEach(d => devices.add(d));
+            for (let name in networkConfig) {
+                if (networkConfig[name]._type === 'device') {
+                    const devName = networkConfig[name].props.name || name;
+                    devices.add(devName);
+                }
+                if (networkConfig[name]._type === 'interface' && networkConfig[name].props.device) {
+                    devices.add(networkConfig[name].props.device);
+                }
+            }
+            return Array.from(devices);
+        }
+
+        function renderInterfaces() {
+            const container = document.getElementById('interfaces-container');
+            container.innerHTML = '';
+            
+            const physicalDevices = getPhysicalDevices();
+            let hasInterface = false;
+            
+            for (let name in networkConfig) {
+                const sect = networkConfig[name];
+                if (sect._type !== 'interface' || name === 'loopback') continue;
+                hasInterface = true;
+                
+                const proto = sect.props.proto || 'dhcp';
+                const device = sect.props.device || '';
+                const ipaddr = sect.props.ipaddr || '';
+                const netmask = sect.props.netmask || '';
+                const gateway = sect.props.gateway || '';
+                
+                const hasDhcp = !!dhcpConfig[name];
+                const dhcpStart = hasDhcp ? (dhcpConfig[name].props.start || '100') : '100';
+                const dhcpLimit = hasDhcp ? (dhcpConfig[name].props.limit || '150') : '150';
+                const dhcpLease = hasDhcp ? (dhcpConfig[name].props.leasetime || '12h') : '12h';
+                const dhcpOption = hasDhcp ? (dhcpConfig[name].props.dhcp_option || '') : '';
+                const dhcpDisabled = hasDhcp ? (dhcpConfig[name].props.ignore === '1') : true;
+
+                let devOptions = '';
+                physicalDevices.forEach(d => {
+                    devOptions += `<option value="${d}" ${device === d ? 'selected' : ''}>${d}</option>`;
+                });
+                devOptions += `<option value="custom" ${!physicalDevices.includes(device) && device ? 'selected' : ''}>-- 自定义 --</option>`;
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = `card-${name}`;
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h2>${name} 接口</h2>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>协议</label>
+                            <select id="proto-${name}" onchange="toggleStaticFields('${name}')">
+                                <option value="dhcp" ${proto === 'dhcp' ? 'selected' : ''}>DHCP 客户端</option>
+                                <option value="static" ${proto === 'static' ? 'selected' : ''}>静态 IP</option>
+                                <option value="none" ${proto === 'none' ? 'selected' : ''}>未配置</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>物理接口 (Device)</label>
+                            <select id="device-sel-${name}" onchange="toggleCustomDevice('${name}')">
+                                ${devOptions}
+                            </select>
+                            <input type="text" id="device-custom-${name}" value="${device}" placeholder="输入自定义物理接口" style="display: ${!physicalDevices.includes(device) && device ? 'block' : 'none'}; margin-top: 8px;">
+                        </div>
+                    </div>
+
+                    <div id="static-fields-${name}" style="display: ${proto === 'static' ? 'block' : 'none'};">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>IP 地址</label>
+                                <input type="text" id="ipaddr-${name}" value="${ipaddr}" placeholder="192.168.1.1">
+                            </div>
+                            <div class="form-group">
+                                <label>子网掩码</label>
+                                <input type="text" id="netmask-${name}" value="${netmask}" placeholder="255.255.255.0">
+                            </div>
+                            <div class="form-group">
+                                <label>默认网关</label>
+                                <input type="text" id="gateway-${name}" value="${gateway}" placeholder="例如: 192.168.1.254 (可留空)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dhcp-section" id="dhcp-section-${name}">
+                        <div class="dhcp-title-row">
+                            <input type="checkbox" id="dhcp-enable-${name}" ${!dhcpDisabled ? 'checked' : ''} onchange="toggleDhcpFields('${name}')">
+                            <label for="dhcp-enable-${name}" style="color: var(--text-main); font-weight: bold; cursor: pointer; font-size: 1rem;">启用 DHCP 服务</label>
+                        </div>
+                        <div id="dhcp-fields-${name}" class="dhcp-fields ${dhcpDisabled ? 'hidden' : ''}">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>起始IP(Start)</label>
+                                    <input type="number" id="dhcp-start-${name}" value="${dhcpStart}" min="1" max="254">
+                                </div>
+                                <div class="form-group">
+                                    <label>客户端数(Limit)</label>
+                                    <input type="number" id="dhcp-limit-${name}" value="${dhcpLimit}" min="1" max="254">
+                                </div>
+                                <div class="form-group">
+                                    <label>租用时间 (Leasetime)</label>
+                                    <input type="text" id="dhcp-lease-${name}" value="${dhcpLease}" placeholder="例如: 12h, 30m">
+                                </div>
+                                <div class="form-group">
+                                    <label>DHCP Option（可选）</label>
+                                    <input type="text" id="dhcp-opt-${name}" value="${dhcpOption}" placeholder="例如: 6,192.168.1.1 (多个用空格隔开)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-actions">
+                        ${name !== 'lan' && name !== 'wan' ? `<button class="btn-del" onclick="deleteInterface('${name}')">删除接口</button>` : ''}
+                        <button class="btn-save" onclick="saveInterface('${name}')">保存 & 应用</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+            if (!hasInterface) {
+                container.innerHTML = `<div class="card">未读取到 network 接口配置。请确认 /cgi-bin/cpe_api.sh?action=get_network 能返回 uci show network 内容。</div>`;
+            }
+        }
+
+        function toggleStaticFields(name) {
+            const proto = document.getElementById(`proto-${name}`).value;
+            const fields = document.getElementById(`static-fields-${name}`);
+            fields.style.display = proto === 'static' ? 'block' : 'none';
+        }
+
+        function toggleCustomDevice(name) {
+            const sel = document.getElementById(`device-sel-${name}`).value;
+            const customInput = document.getElementById(`device-custom-${name}`);
+            customInput.style.display = sel === 'custom' ? 'block' : 'none';
+        }
+
+        function toggleDhcpFields(name) {
+            const chk = document.getElementById(`dhcp-enable-${name}`).checked;
+            const fields = document.getElementById(`dhcp-fields-${name}`);
+            fields.classList.toggle('hidden', !chk);
+        }
+
+        function getNextInterfaceIp() {
+            let maxSubnet = 150;
+            for (let name in networkConfig) {
+                const ip = (networkConfig[name].props && networkConfig[name].props.ipaddr) || '';
+                const match = ip.match(/^192\.168\.(\d{1,3})\.1$/);
+                if (match) maxSubnet = Math.max(maxSubnet, parseInt(match[1], 10));
+            }
+            const nextSubnet = Math.min(maxSubnet + 1, 254);
+            return `192.168.${nextSubnet}.1`;
+        }
+
+        function openAddModal() {
+            document.getElementById('add_name').value = '';
+            document.getElementById('add_proto').value = 'static';
+            document.getElementById('add_ipaddr').value = getNextInterfaceIp();
+            document.getElementById('add_netmask').value = '255.255.255.0';
+            document.getElementById('add_gateway').value = '';
+            
+            const sel = document.getElementById('add_device_sel');
+            sel.innerHTML = '';
+            getPhysicalDevices().forEach(d => {
+                sel.innerHTML += `<option value="${d}">${d}</option>`;
+            });
+            sel.innerHTML += `<option value="custom">-- 自定义 --</option>`;
+            
+            document.getElementById('add_device_custom').style.display = 'none';
+            document.getElementById('add_device_custom').value = '';
+            
+            toggleAddStaticFields();
+            document.getElementById('addModal').style.display = 'flex';
+        }
+
+        function toggleAddStaticFields() {
+            const proto = document.getElementById('add_proto').value;
+            document.getElementById('add_static_fields').style.display = proto === 'static' ? 'block' : 'none';
+        }
+
+        function toggleAddCustomDevice() {
+            const sel = document.getElementById('add_device_sel').value;
+            document.getElementById('add_device_custom').style.display = sel === 'custom' ? 'block' : 'none';
+        }
+
+        function closeModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+
+        async function submitAdd() {
+            const name = document.getElementById('add_name').value.trim();
+            const proto = document.getElementById('add_proto').value;
+            
+            if (!name) return alert('请输入接口名称');
+            if (networkConfig[name]) return alert('接口已存在');
+            
+            let device = document.getElementById('add_device_sel').value;
+            if (device === 'custom') {
+                device = document.getElementById('add_device_custom').value.trim();
+            }
+            if (!device) return alert('请选择 or 输入物理接口');
+
+            networkConfig[name] = {
+                _name: name,
+                _type: 'interface',
+                props: {
+                    proto: proto,
+                    device: device
+                }
+            };
+
+            if (proto === 'static') {
+                networkConfig[name].props.ipaddr = document.getElementById('add_ipaddr').value.trim();
+                networkConfig[name].props.netmask = document.getElementById('add_netmask').value.trim();
+                networkConfig[name].props.gateway = document.getElementById('add_gateway').value.trim();
+            }
+
+            const dnsIp = networkConfig[name].props.ipaddr || getNextInterfaceIp();
+            dhcpConfig[name] = {
+                _name: name,
+                _type: 'dhcp',
+                props: {
+                    interface: name,
+                    start: '100',
+                    limit: '150',
+                    leasetime: '12h',
+                    dhcp_option: `6,${dnsIp}`
+                }
+            };
+
+            closeModal();
+            renderInterfaces();
+            await saveInterface(name);
+        }
+
+        async function deleteInterface(name) {
+            if (!(await confirmAction(`确定要删除接口 ${name} 吗？`))) return;
+            setBusy(true, '正在执行，请稍后');
+            
+            let cmds = [];
+            cmds.push(`uci delete network.${name}`);
+            cmds.push(`uci commit network`);
+            let dhcpCmds = [];
+            dhcpCmds.push(`uci delete dhcp.${name}`);
+            dhcpCmds.push(`uci commit dhcp`);
+
+            try {
+                const okNet = await postUci('set_network', cmds);
+                const okDhcp = await postUci('set_dhcp', dhcpCmds);
+                if (okNet && okDhcp) {
+                    delete networkConfig[name];
+                    delete dhcpConfig[name];
+                    setBusy(false);
+                    await showToast('配置成功，正在重启网络');
+                    await init();
+                } else {
+                    alert('删除失败');
+                }
+            } catch (e) {
+                alert(e.message || '删除异常');
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        async function saveInterface(name) {
+            const proto = document.getElementById(`proto-${name}`).value;
+            let device = document.getElementById(`device-sel-${name}`).value;
+            if (device === 'custom') {
+                device = document.getElementById(`device-custom-${name}`).value.trim();
+            }
+            
+            let networkCmds = [];
+            let dhcpCmds = [];
+            let currentIpaddr = '';
+            networkCmds.push(`uci set network.${name}=interface`);
+            networkCmds.push(`uci set network.${name}.proto=${uciQuote(proto)}`);
+            networkCmds.push(`uci set network.${name}.device=${uciQuote(device)}`);
+            
+            if (proto === 'static') {
+                const ipaddr = document.getElementById(`ipaddr-${name}`).value.trim();
+                const netmask = document.getElementById(`netmask-${name}`).value.trim();
+                const gateway = document.getElementById(`gateway-${name}`).value.trim();
+                currentIpaddr = ipaddr;
+                
+                if (!ipaddr || !netmask) return alert('IP地址和子网掩码不能为空！');
+                
+                networkCmds.push(`uci set network.${name}.ipaddr=${uciQuote(ipaddr)}`);
+                networkCmds.push(`uci set network.${name}.netmask=${uciQuote(netmask)}`);
+                if (gateway) {
+                    networkCmds.push(`uci set network.${name}.gateway=${uciQuote(gateway)}`);
+                } else {
+                    networkCmds.push(`uci delete network.${name}.gateway`);
+                }
+            } else {
+                networkCmds.push(`uci delete network.${name}.ipaddr`);
+                networkCmds.push(`uci delete network.${name}.netmask`);
+                networkCmds.push(`uci delete network.${name}.gateway`);
+            }
+            networkCmds.push(`uci commit network`);
+
+            const dhcpEnable = document.getElementById(`dhcp-enable-${name}`).checked;
+            if (dhcpEnable) {
+                const start = document.getElementById(`dhcp-start-${name}`).value;
+                const limit = document.getElementById(`dhcp-limit-${name}`).value;
+                const lease = document.getElementById(`dhcp-lease-${name}`).value.trim();
+                const opt = document.getElementById(`dhcp-opt-${name}`).value.trim() || (proto === 'static' && currentIpaddr ? `6,${currentIpaddr}` : '');
+                
+                dhcpCmds.push(`uci set dhcp.${name}=dhcp`);
+                dhcpCmds.push(`uci set dhcp.${name}.interface=${uciQuote(name)}`);
+                dhcpCmds.push(`uci set dhcp.${name}.start=${uciQuote(start)}`);
+                dhcpCmds.push(`uci set dhcp.${name}.limit=${uciQuote(limit)}`);
+                dhcpCmds.push(`uci set dhcp.${name}.leasetime=${uciQuote(lease)}`);
+                dhcpCmds.push(`uci delete dhcp.${name}.ignore`);
+                
+                if (opt) {
+                    dhcpCmds.push(`uci delete dhcp.${name}.dhcp_option`);
+                    const optArray = opt.split(/\s+/).filter(Boolean);
+                    optArray.forEach(o => {
+                        dhcpCmds.push(`uci add_list dhcp.${name}.dhcp_option=${uciQuote(o)}`);
+                    });
+                } else {
+                    dhcpCmds.push(`uci delete dhcp.${name}.dhcp_option`);
+                }
+            } else {
+                dhcpCmds.push(`uci set dhcp.${name}=dhcp`);
+                dhcpCmds.push(`uci set dhcp.${name}.interface=${uciQuote(name)}`);
+                dhcpCmds.push(`uci set dhcp.${name}.ignore='1'`);
+            }
+            dhcpCmds.push(`uci commit dhcp`);
+
+            setBusy(true, '正在执行，请稍后');
+            try {
+                const okNet = await postUci('set_network', networkCmds);
+                const okDhcp = await postUci('set_dhcp', dhcpCmds);
+                if (okNet && okDhcp) {
+                    setBusy(false);
+                    await showToast('配置成功，正在重启网络');
+                    await init();
+                } else {
+                    alert('保存失败');
+                }
+            } catch (e) {
+                alert(e.message || '保存异常');
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        function setBusy(active, text) {
+            const lock = document.getElementById('pageLock');
+            if (!lock) return;
+            if (text) lock.querySelector('.lock-text').textContent = text;
+            lock.classList.toggle('active', !!active);
+        }
+
+        function confirmAction(text) {
+            document.getElementById('confirmText').textContent = text || '确定执行该操作吗？';
+            document.getElementById('confirmLayer').classList.add('active');
+            return new Promise(resolve => { confirmResolver = resolve; });
+        }
+
+        function resolveConfirm(ok) {
+            document.getElementById('confirmLayer').classList.remove('active');
+            if (confirmResolver) confirmResolver(!!ok);
+            confirmResolver = null;
+        }
+
+        function showToast(message) {
+            const t = document.getElementById('toast');
+            if (message) t.textContent = message;
+            t.classList.add('show');
+            clearTimeout(showToast.timer);
+            return new Promise(resolve => {
+                showToast.timer = setTimeout(() => {
+                    t.classList.remove('show');
+                    resolve();
+                }, 2200);
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

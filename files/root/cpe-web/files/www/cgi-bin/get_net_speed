@@ -1,0 +1,63 @@
+#!/bin/sh
+SESSIONS_FILE="/tmp/cpe_sessions"
+SESSION_TTL=86400
+
+require_auth() {
+    token="$HTTP_X_CPE_TOKEN"
+    [ -n "$token" ] || token=$(echo "$QUERY_STRING" | grep -o 'token=[^&]*' | cut -d= -f2)
+    [ -n "$token" ] || token=$(echo "$QUERY_STRING" | grep -o '_cpe_token=[^&]*' | cut -d= -f2)
+    [ -n "$token" ] || return 1
+    now=$(date +%s)
+    awk -F'|' -v t="$token" -v now="$now" '$1==t && $4>now {ok=1} END {exit ok?0:1}' "$SESSIONS_FILE" 2>/dev/null || return 1
+    new_exp=$((now + SESSION_TTL))
+    tmp="/tmp/cpe_sessions.$$"
+    awk -F'|' -v t="$token" -v exp="$new_exp" 'BEGIN{OFS=FS} $1==t {$4=exp} {print}' "$SESSIONS_FILE" > "$tmp" 2>/dev/null && mv "$tmp" "$SESSIONS_FILE"
+    chmod 600 "$SESSIONS_FILE" 2>/dev/null || true
+    return 0
+}
+
+echo "Content-type: application/json"
+echo ""
+if ! require_auth; then
+    echo '{"status":"error","msg":"unauthorized"}'
+    exit 0
+fi
+
+get_wan_iface() {
+    arch=$(uname -m 2>/dev/null)
+    case "$arch" in
+        x86_64|i386|i686) preferred="eth0" ;;
+        arm*|aarch64*) preferred="eth1" ;;
+        *) preferred="eth0" ;;
+    esac
+    if grep -q "^[[:space:]]*$preferred:" /proc/net/dev 2>/dev/null; then
+        echo "$preferred"
+        return
+    fi
+    if command -v uci >/dev/null 2>&1; then
+        cfg=$(uci -q get network.wan.device || uci -q get network.wan.ifname || true)
+        if [ -n "$cfg" ] && grep -q "^[[:space:]]*$cfg:" /proc/net/dev 2>/dev/null; then
+            echo "$cfg"
+            return
+        fi
+    fi
+    route_if=$(ip route 2>/dev/null | awk '/default/ {print $5; exit}')
+    if [ -n "$route_if" ] && grep -q "^[[:space:]]*$route_if:" /proc/net/dev 2>/dev/null; then
+        echo "$route_if"
+        return
+    fi
+    echo "$preferred"
+}
+
+wan_iface=$(get_wan_iface)
+qos_download=$(uci -q get qos.global.download 2>/dev/null || echo 0)
+echo "$qos_download" | grep -Eq '^[0-9]+$' || qos_download=0
+echo "{"
+awk -v wan="$wan_iface" -v qos_download="$qos_download" 'BEGIN {
+    printf "\"_meta\": {\"wan\": \"%s\", \"qos_download\": %s}", wan, qos_download
+}
+NR > 2 {
+    sub(/:/, "", $1);
+    printf ",\"%s\": {\"rx\": %s, \"tx\": %s}", $1, $2, $10
+}' /proc/net/dev
+echo "}"

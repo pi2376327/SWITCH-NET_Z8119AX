@@ -1,0 +1,94 @@
+#!/bin/sh
+SESSIONS_FILE="/tmp/cpe_sessions"
+SESSION_TTL=86400
+
+require_auth() {
+    token="$HTTP_X_CPE_TOKEN"
+    [ -n "$token" ] || token=$(echo "$QUERY_STRING" | grep -o 'token=[^&]*' | cut -d= -f2)
+    [ -n "$token" ] || token=$(echo "$QUERY_STRING" | grep -o '_cpe_token=[^&]*' | cut -d= -f2)
+    [ -n "$token" ] || return 1
+    now=$(date +%s)
+    awk -F'|' -v t="$token" -v now="$now" '$1==t && $4>now {ok=1} END {exit ok?0:1}' "$SESSIONS_FILE" 2>/dev/null || return 1
+    new_exp=$((now + SESSION_TTL))
+    tmp="/tmp/cpe_sessions.$$"
+    awk -F'|' -v t="$token" -v exp="$new_exp" 'BEGIN{OFS=FS} $1==t {$4=exp} {print}' "$SESSIONS_FILE" > "$tmp" 2>/dev/null && mv "$tmp" "$SESSIONS_FILE"
+    chmod 600 "$SESSIONS_FILE" 2>/dev/null || true
+    return 0
+}
+
+echo "Content-type: application/json"
+echo ""
+if ! require_auth; then
+    echo '{"status":"error","msg":"unauthorized"}'
+    exit 0
+fi
+
+TIME_RANGE="-1h"
+RESOLUTION="60"
+if [ -n "$QUERY_STRING" ]; then
+    q=$(echo "$QUERY_STRING" | tr '&' '\n' | grep -v '^token=' | grep -v '^_cpe_token=')
+    first=$(echo "$q" | sed -n '1p')
+    second=$(echo "$q" | sed -n '2p')
+    [ -n "$first" ] && TIME_RANGE="-$first"
+    [ -n "$second" ] && RESOLUTION="$second"
+fi
+DB_DIR="/usr/share/traffic_rrd"
+
+range_to_seconds() {
+    case "$1" in
+        *m) echo "$1" | awk '{v=substr($0,1,length($0)-1)+0; print v*60}' ;;
+        *h) echo "$1" | awk '{v=substr($0,1,length($0)-1)+0; print v*3600}' ;;
+        *d) echo "$1" | awk '{v=substr($0,1,length($0)-1)+0; print v*86400}' ;;
+        *) echo 3600 ;;
+    esac
+}
+
+RANGE_ARG=${TIME_RANGE#-}
+RANGE_SEC=$(range_to_seconds "$RANGE_ARG")
+NOW=$(date +%s)
+START=$((NOW - RANGE_SEC))
+
+echo "{"
+first=1
+for iface in SDWAN_TOTAL WAN_TOTAL LAN_TOTAL; do
+    f="$DB_DIR/$iface.rrd"
+    if [ $first -ne 1 ]; then echo ","; fi
+    first=0
+    echo "\"$iface\": ["
+    {
+        if [ -f "$f" ]; then
+            rrdtool fetch "$f" AVERAGE -s "$START" -e "$NOW" -r "$RESOLUTION"
+        else
+            :
+        fi
+    } | awk -v start="$START" -v now="$NOW" -v res="$RESOLUTION" '
+        NR > 2 {
+            if ($1 != "") {
+                sub(/:/, "", $1);
+                if ($1 ~ /^[0-9]+$/) {
+                    bucket = int($1 / res) * res;
+                    val_rx = (tolower($2) ~ /nan/ || $2 == "" || $2 == "-") ? 0 : $2;
+                    val_tx = (tolower($3) ~ /nan/ || $3 == "" || $3 == "-") ? 0 : $3;
+                    rx[bucket] = val_rx;
+                    tx[bucket] = val_tx;
+                }
+            }
+        }
+        END {
+            first_bucket = int(start / res) * res;
+            if (first_bucket < start) first_bucket += res;
+            last_bucket = int(now / res) * res;
+            total = int((last_bucket - first_bucket) / res) + 1;
+            if (total < 1) total = 1;
+            idx = 0;
+            for (t = first_bucket; t <= last_bucket; t += res) {
+                idx++;
+                val_rx = (t in rx) ? rx[t] : 0;
+                val_tx = (t in tx) ? tx[t] : 0;
+                printf "{\x22time\x22: \x22%s\x22, \x22rx\x22: %.2f, \x22tx\x22: %.2f}%s\n", t, val_rx, val_tx, (idx<total?",":"");
+            }
+        }
+    '
+    echo "]"
+done
+echo "}"
