@@ -239,14 +239,16 @@ attach_tun() {
 }
 
 start() {
-    stop
+    stop 2>&1 >/dev/null
     log_msg "=== Starting QoS Service ==="
+	echo "=== Starting QoS Service ==="
     load_config
     ensure_ifb || return 1
 
     TUN_DEVS=$(list_tun_devs)
     [ -n "$TUN_DEVS" ] || {
         log_msg "WARNING: No active tun interface found."
+		echo "WARNING: No active tun interface found."
         return 0
     }
 
@@ -262,6 +264,7 @@ start() {
             prepare_tun "$dev"
             attach_tun "$dev" 1000000kbit || { log_msg "ERROR: failed to attach monitor to $dev"; return 1; }
             log_msg "Traffic monitor attached without rate limit: $dev"
+			echo "Traffic monitor attached without rate limit: $dev"
         done
         return 0
     fi
@@ -274,16 +277,19 @@ start() {
     tc class add dev ifb1 parent 1: classid 1:10 htb rate ${UL_LIMIT}kbit ceil ${UL_LIMIT}kbit || return 1
 
     log_msg "Shared pool created: Download=${DL_LIMIT}kbps, Upload=${UL_LIMIT}kbps"
+	echo "Shared pool created: Download=${DL_LIMIT}kbps, Upload=${UL_LIMIT}kbps"
 
     for dev in $TUN_DEVS; do
         prepare_tun "$dev"
         attach_tun "$dev" ${UL_LIMIT}kbit || { log_msg "ERROR: failed to attach QoS to $dev"; return 1; }
         log_msg "Successfully attached interface to shared pool: $dev"
+		echo "Successfully attached interface to shared pool: $dev"
     done
 }
 
 stop() {
     log_msg "=== Stopping QoS Service ==="
+	echo "=== Stopping QoS Service ==="
     for dev in $(list_tun_devs); do
         tc filter del dev "$dev" parent 1: 2>/dev/null
         tc filter del dev "$dev" parent ffff: 2>/dev/null
@@ -293,6 +299,7 @@ stop() {
     tc qdisc del dev ifb0 root 2>/dev/null
     tc qdisc del dev ifb1 root 2>/dev/null
     log_msg "QoS Service stopped."
+	echo "QoS Service stopped."
 }
 
 case "$1" in
