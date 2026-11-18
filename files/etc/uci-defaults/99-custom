@@ -198,11 +198,11 @@ echo 'nameserver 119.29.29.29' >> /etc/resolv.conf
 sed -i '/DISTRIB_ID/d' /etc/openwrt_release
 echo "DISTRIB_ID='SWITCH-NET_CPE'" >> /etc/openwrt_release
 sed -i '/DISTRIB_RELEASE/d' /etc/openwrt_release
-echo "DISTRIB_RELEASE='v2026'" >> /etc/openwrt_release
+echo "DISTRIB_RELEASE='v202611'" >> /etc/openwrt_release
 sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
-echo "DISTRIB_REVISION='R2026'" >> /etc/openwrt_release
+echo "DISTRIB_REVISION='R202611'" >> /etc/openwrt_release
 sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
-echo "DISTRIB_DESCRIPTION='Powered by SWITCH-NET at 20260419'" >> /etc/openwrt_release
+echo "DISTRIB_DESCRIPTION='Powered by SWITCH-NET at 20261119'" >> /etc/openwrt_release
 #sed -i "/OPENWRT_RELEASE*/d" /usr/lib/os-release
 #echo 'OPENWRT_RELEASE="Powered by SWITCH-NET 20260419"' >> /usr/lib/os-release
 
