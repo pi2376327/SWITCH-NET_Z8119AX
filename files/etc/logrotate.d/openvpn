@@ -1,0 +1,11 @@
+/var/log/openvpn.log {
+    daily
+    rotate 2
+    size 1M
+    missingok
+    notifempty
+    create 0644 root root
+    postrotate
+        /etc/init.d/openvpn restart > /dev/null 2>&1
+    endscript
+}
